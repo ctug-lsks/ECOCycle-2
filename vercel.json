@@ -1,0 +1,14 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "services": {
+        "database-mongodb": {
+            "root": "database-mongodb",
+            "framework": "express"
+        },
+        "web2-final": {
+            "root": "web2-final",
+            "framework": "angular"
+        }
+    },
+    "rewrites": []
+}
