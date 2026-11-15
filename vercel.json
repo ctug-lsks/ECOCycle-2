@@ -5,7 +5,7 @@
             "root": "database-mongodb",
             "framework": "express"
         },
-        "web2-final": {
+        "webfinal": {
             "root": "web2-final",
             "framework": "angular"
         }
