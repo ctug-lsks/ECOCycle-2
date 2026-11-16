@@ -3,7 +3,7 @@
     <div>
       <p class="eyebrow"><i class="bi bi-coin"></i> CẬP NHẬT GREENCOIN</p>
       <h2 id="green-coin-title">Thêm GreenCoin</h2>
-      <p class="description">Quy đổi khối lượng tái chế của {{ getDisplayName() }}.</p>
+      <p class="description">Quy đổi khối lượng xử lý của {{ getDisplayName() }}.</p>
     </div>
     <button type="button" class="close-button" (click)="close()" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
   </header>
@@ -11,7 +11,7 @@
   @if (errorMessage) { <p class="error-message" role="alert">{{ errorMessage }}</p> }
 
   <form class="coin-form" (submit)="$event.preventDefault(); submit()">
-    <label for="recycled-kg">Số kg tái chế</label>
+    <label for="recycled-kg">Số kg xử lý</label>
     <div class="amount-field">
       <i class="bi bi-recycle"></i>
       <input id="recycled-kg" type="number" min="0.001" step="0.001" [value]="recycledKg || ''" (input)="recycledKg = +$any($event.target).value" required autofocus>

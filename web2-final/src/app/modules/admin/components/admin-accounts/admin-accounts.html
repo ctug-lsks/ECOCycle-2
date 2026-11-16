@@ -75,7 +75,7 @@
             <div><dt>Địa chỉ</dt><dd>{{ getAddress(selectedUser) }}</dd></div>
             <div><dt>Vai trò</dt><dd>{{ selectedUser.role || 'CUSTOMER' }}</dd></div>
             <div><dt>GreenCoin</dt><dd class="coin-value"><i class="bi bi-coin"></i> {{ formatNumber(selectedUser.greenCoins) }}</dd></div>
-            <div><dt>Đã tái chế</dt><dd>{{ (selectedUser.eWasteRecycledKg || 0).toLocaleString('vi-VN') }} kg</dd></div>
+            <div><dt>Đã xử lý</dt><dd>{{ (selectedUser.eWasteRecycledKg || 0).toLocaleString('vi-VN') }} kg</dd></div>
             <div><dt>Ngày tham gia</dt><dd>{{ formatDate(selectedUser.joinDate) }}</dd></div>
           </dl>
         </div>
