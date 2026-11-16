@@ -394,7 +394,7 @@
             <h3>Đăng nhập để xem hành trình xanh</h3>
             <p>
               Theo dõi sản phẩm, thiết bị tái sử dụng
-              và hoạt động tái chế của bạn.
+              và hoạt động của bạn.
             </p>
           </div>
 
@@ -509,7 +509,7 @@
                   <i class="bi bi-trash3"></i>
                 </span>
 
-                <span>Đã tái chế</span>
+                <span>Đã xử lý</span>
 
                 <strong>
                   {{ formatNumber(personal.eWasteProcessedKg) }}
@@ -583,13 +583,13 @@
                 @if (selectedPersonalStat === 'recycled') {
                   <div class="personal-detail-heading">
                     <i class="bi bi-trash3"></i>
-                    <strong>Hoạt động tái chế</strong>
+                    <strong>Hoạt động xử lý</strong>
                   </div>
 
                   <p>
                     Hệ thống đã ghi nhận
                     <b>{{ formatNumber(personal.eWasteProcessedKg) }} kg</b>
-                    rác điện tử được tái chế từ tài khoản của bạn.
+                    rác điện tử được xử lý từ tài khoản của bạn.
                   </p>
 
                   <span class="personal-detail-note">
@@ -787,8 +787,8 @@
                   </span>
 
                   <span class="achievement-info">
-                    <strong>Đại sứ tái chế</strong>
-                    <small>Tái chế ít nhất 1 kg rác điện tử</small>
+                    <strong>Đại sứ xử lý</strong>
+                    <small>Xử lý ít nhất 1 kg rác điện tử</small>
                   </span>
 
                   <span
@@ -818,7 +818,7 @@
                       [attr.aria-valuenow]="getAchievementProgress(personal.eWasteProcessedKg, 1)"
                       aria-valuemin="0"
                       aria-valuemax="100"
-                      aria-label="Tiến độ huy hiệu Đại sứ tái chế">
+                      aria-label="Tiến độ huy hiệu Đại sứ xử lý">
                       <div
                         class="achievement-progress-fill"
                         [style.width.%]="getAchievementProgress(personal.eWasteProcessedKg, 1)">
@@ -828,7 +828,7 @@
                     @if (personal.eWasteProcessedKg >= 1) {
                       <p class="achievement-success">
                         <i class="bi bi-check-circle-fill"></i>
-                        Bạn đã đạt huy hiệu Đại sứ tái chế!
+                        Bạn đã đạt huy hiệu Đại sứ xử lý!
                       </p>
                     } @else {
                       <p>
@@ -839,7 +839,7 @@
 
                       <span class="achievement-hint">
                         <i class="bi bi-info-circle"></i>
-                        Tiến độ được cập nhật khi hoạt động tái chế được xác nhận.
+                        Tiến độ được cập nhật khi hoạt động xử lý được xác nhận.
                       </span>
                     }
                   </div>
