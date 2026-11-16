@@ -15,18 +15,18 @@
     <div class="section-heading">
       <div>
         <h2 id="product-requests-title">Tất cả yêu cầu sản phẩm</h2>
-        <p>{{ filteredRequests.length }} yêu cầu hiển thị / {{ requests.length }} yêu cầu</p>
+        <p>Trang {{ currentPage }}/{{ totalPages }} &bull; Hiển thị {{ paginatedRequests.length }} / {{ filteredRequests.length }} yêu cầu (Tổng {{ requests.length }} yêu cầu)</p>
       </div>
       <div class="section-tools">
         <label class="search-box">
           <i class="bi bi-search"></i>
-          <input type="search" [(ngModel)]="searchTerm" placeholder="Tìm theo mã yêu cầu" aria-label="Tìm theo requestId">
+          <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Tìm theo mã yêu cầu" aria-label="Tìm theo requestId">
         </label>
-        <select [(ngModel)]="selectedStatus" aria-label="Lọc theo trạng thái">
+        <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()" aria-label="Lọc theo trạng thái">
           <option value="">Tất cả trạng thái</option>
           @for (status of statuses; track status) { <option [value]="status">{{ status }}</option> }
         </select>
-        <select [(ngModel)]="selectedRole" aria-label="Lọc theo vai trò">
+        <select [(ngModel)]="selectedRole" (ngModelChange)="onFilterChange()" aria-label="Lọc theo vai trò">
           <option value="">Tất cả vai trò</option>
           @for (role of userRoles; track role) { <option [value]="role">{{ role }}</option> }
         </select>
@@ -39,7 +39,7 @@
       <div class="state"><i class="bi bi-inbox"></i><strong>Chưa tìm thấy yêu cầu</strong><span>Thử thay đổi mã yêu cầu hoặc bộ lọc.</span></div>
     } @else {
       <div class="request-list">
-        @for (request of filteredRequests; track request._id || getRequestId(request)) {
+        @for (request of paginatedRequests; track request._id || getRequestId(request)) {
           <article class="request-card">
             <div class="request-icon"><i class="bi bi-box-seam"></i></div>
             <div class="request-info">
@@ -66,6 +66,45 @@
           </article>
         }
       </div>
+
+      @if (totalPages > 1) {
+        <div class="pagination-container">
+          <div class="pagination-info">
+            Trang <b class="highlight">{{ currentPage }}</b> / {{ totalPages }} (Tổng {{ filteredRequests.length }} yêu cầu)
+          </div>
+
+          <div class="pagination-controls">
+            <button 
+              type="button"
+              (click)="goToPage(currentPage - 1)" 
+              [disabled]="currentPage === 1"
+              class="page-nav-btn"
+            >
+              <i class="bi bi-chevron-left me-1"></i>Trước
+            </button>
+
+            @for (pageItem of pagesArray; track pageItem) {
+              <button 
+                type="button"
+                (click)="goToPage(pageItem)"
+                [class.active]="pageItem === currentPage"
+                class="page-num-btn"
+              >
+                {{ pageItem }}
+              </button>
+            }
+
+            <button 
+              type="button"
+              (click)="goToPage(currentPage + 1)" 
+              [disabled]="currentPage === totalPages"
+              class="page-nav-btn"
+            >
+              Sau<i class="bi bi-chevron-right ms-1"></i>
+            </button>
+          </div>
+        </div>
+      }
     }
   </section>
 

@@ -21,6 +21,11 @@ export class AdminPostManagement implements OnInit {
   errorMessage = '';
   successMessage = '';
 
+  pageSize = 50;
+  currentPage = 1;
+  totalPages = 1;
+  pagesArray: number[] = [1];
+
   constructor(
     private readonly adminService: AdminService,
     private readonly changeDetectorRef: ChangeDetectorRef
@@ -34,6 +39,32 @@ export class AdminPostManagement implements OnInit {
         (!this.selectedStatus || request.status === this.selectedStatus) &&
         (!this.selectedRole || request.userRole === this.selectedRole);
     });
+  }
+
+  get paginatedRequests(): AdminProductRequest[] {
+    const list = this.filteredRequests;
+    this.totalPages = Math.ceil(list.length / this.pageSize) || 1;
+    this.pagesArray = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    return list.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
   }
 
   ngOnInit(): void {

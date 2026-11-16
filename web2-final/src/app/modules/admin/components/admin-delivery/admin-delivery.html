@@ -15,16 +15,16 @@
     <div class="section-heading">
       <div>
         <h2 id="orders-title">Tất cả đơn hàng</h2>
-        <p>{{ filteredOrders.length }} đơn hàng hiển thị / {{ orders.length }} đơn hàng</p>
+        <p>Trang {{ currentPage }}/{{ totalPages }} &bull; Hiển thị {{ paginatedOrders.length }} / {{ filteredOrders.length }} đơn hàng (Tổng {{ orders.length }} đơn hàng)</p>
       </div>
       <div class="section-tools">
         <label class="search-box">
           <i class="bi bi-search"></i>
-          <input type="search" [(ngModel)]="searchTerm" placeholder="Tìm theo mã đơn hàng" aria-label="Tìm kiếm theo orderID">
+          <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Tìm theo mã đơn hàng" aria-label="Tìm kiếm theo orderID">
         </label>
         <label class="filter-box">
           <i class="bi bi-funnel"></i>
-          <select [(ngModel)]="selectedStatus" aria-label="Lọc đơn hàng theo trạng thái">
+          <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()" aria-label="Lọc đơn hàng theo trạng thái">
             <option value="">Tất cả trạng thái</option>
             @for (status of statuses; track status) {
               <option [value]="status">{{ status }}</option>
@@ -40,7 +40,7 @@
       <div class="state"><i class="bi bi-box-seam"></i><strong>Chưa tìm thấy đơn hàng</strong><span>Thử thay đổi orderID hoặc trạng thái lọc.</span></div>
     } @else {
       <div class="order-list">
-        @for (order of filteredOrders; track order._id || getOrderID(order)) {
+        @for (order of paginatedOrders; track order._id || getOrderID(order)) {
           <article class="order-card">
             <div class="order-icon"><i class="bi bi-receipt"></i></div>
             <div class="order-info">
@@ -64,6 +64,45 @@
           </article>
         }
       </div>
+
+      @if (totalPages > 1) {
+        <div class="pagination-container">
+          <div class="pagination-info">
+            Trang <b class="highlight">{{ currentPage }}</b> / {{ totalPages }} (Tổng {{ filteredOrders.length }} đơn hàng)
+          </div>
+
+          <div class="pagination-controls">
+            <button 
+              type="button"
+              (click)="goToPage(currentPage - 1)" 
+              [disabled]="currentPage === 1"
+              class="page-nav-btn"
+            >
+              <i class="bi bi-chevron-left me-1"></i>Trước
+            </button>
+
+            @for (pageItem of pagesArray; track pageItem) {
+              <button 
+                type="button"
+                (click)="goToPage(pageItem)"
+                [class.active]="pageItem === currentPage"
+                class="page-num-btn"
+              >
+                {{ pageItem }}
+              </button>
+            }
+
+            <button 
+              type="button"
+              (click)="goToPage(currentPage + 1)" 
+              [disabled]="currentPage === totalPages"
+              class="page-nav-btn"
+            >
+              Sau<i class="bi bi-chevron-right ms-1"></i>
+            </button>
+          </div>
+        </div>
+      }
     }
   </section>
 

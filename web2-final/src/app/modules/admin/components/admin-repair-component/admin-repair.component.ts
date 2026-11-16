@@ -34,6 +34,11 @@ export class AdminRepairComponent implements OnInit, OnDestroy {
   private requestedRepairOrderID: string | null = null;
   private routeQuerySubscription?: Subscription;
 
+  pageSize = 50;
+  currentPage = 1;
+  totalPages = 1;
+  pagesArray: number[] = [1];
+
   get filteredRequests(): RepairRequest[] {
     const search = this.searchTerm.trim().toLowerCase();
     return this.requests.filter(request => {
@@ -41,6 +46,32 @@ export class AdminRepairComponent implements OnInit, OnDestroy {
       const matchesStatus = !this.selectedStatus || this.displayStatus(request.status) === this.selectedStatus;
       return matchesSearch && matchesStatus;
     });
+  }
+
+  get paginatedRequests(): RepairRequest[] {
+    const list = this.filteredRequests;
+    this.totalPages = Math.ceil(list.length / this.pageSize) || 1;
+    this.pagesArray = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    return list.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
   }
 
   constructor(

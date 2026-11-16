@@ -14,17 +14,17 @@
     <div class="section-heading">
       <div>
         <h2 id="requests-title">Tất cả yêu cầu</h2>
-        <p>{{ filteredRequests.length }} yêu cầu cần theo dõi</p>
+        <p>Trang {{ currentPage }}/{{ totalPages }} &bull; Hiển thị {{ paginatedRequests.length }} / {{ filteredRequests.length }} yêu cầu (Tổng {{ requests.length }} yêu cầu)</p>
       </div>
     </div>
     <div class="request-filters">
       <label class="search-field">
         <i class="bi bi-search" aria-hidden="true"></i>
-        <input type="search" [(ngModel)]="searchTerm" placeholder="Tìm theo mã yêu cầu sửa chữa" aria-label="Tìm theo mã repairOrderID">
+        <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()" placeholder="Tìm theo mã yêu cầu sửa chữa" aria-label="Tìm theo mã repairOrderID">
       </label>
       <label class="status-filter">
         <span>Lọc trạng thái</span>
-        <select [(ngModel)]="selectedStatus" aria-label="Lọc repair order theo trạng thái">
+        <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()" aria-label="Lọc repair order theo trạng thái">
           <option value="">Tất cả trạng thái</option>
           @for (status of statuses; track status) {
             <option [value]="status">{{ status }}</option>
@@ -36,7 +36,7 @@
   @else if (!filteredRequests.length) { <div class="empty"><i class="bi bi-inbox"></i><strong>Không tìm thấy yêu cầu sửa chữa</strong><span>Thử thay đổi từ khóa hoặc trạng thái lọc.</span></div> }
   @else {
     <section class="request-list">
-      @for (request of filteredRequests; track request.repairOrderID) {
+      @for (request of paginatedRequests; track request.repairOrderID) {
         <article class="request-card">
           <div class="request-main">
             <div class="request-title">
@@ -97,6 +97,45 @@
         </article>
       }
     </section>
+
+    @if (totalPages > 1) {
+      <div class="pagination-container">
+        <div class="pagination-info">
+          Trang <b class="highlight">{{ currentPage }}</b> / {{ totalPages }} (Tổng {{ filteredRequests.length }} yêu cầu)
+        </div>
+
+        <div class="pagination-controls">
+          <button 
+            type="button"
+            (click)="goToPage(currentPage - 1)" 
+            [disabled]="currentPage === 1"
+            class="page-nav-btn"
+          >
+            <i class="bi bi-chevron-left me-1"></i>Trước
+          </button>
+
+          @for (pageItem of pagesArray; track pageItem) {
+            <button 
+              type="button"
+              (click)="goToPage(pageItem)"
+              [class.active]="pageItem === currentPage"
+              class="page-num-btn"
+            >
+              {{ pageItem }}
+            </button>
+          }
+
+          <button 
+            type="button"
+            (click)="goToPage(currentPage + 1)" 
+            [disabled]="currentPage === totalPages"
+            class="page-nav-btn"
+          >
+            Sau<i class="bi bi-chevron-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    }
   }
   </section>
   @if (selectedRequest) {

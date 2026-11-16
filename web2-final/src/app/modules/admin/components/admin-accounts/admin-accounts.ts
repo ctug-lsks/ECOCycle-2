@@ -17,13 +17,46 @@ export class AdminAccounts implements OnInit {
   successMessage = '';
   searchTerm = '';
 
+  pageSize: number = 50;
+  currentPage: number = 1;
+  totalPages: number = 1;
+  pagesArray: number[] = [1];
+
   get filteredUsers(): AdminUser[] {
     const keyword = this.searchTerm.trim().toLowerCase();
     if (!keyword) return this.users;
     return this.users.filter(user =>
       (user.userName || '').toLowerCase().includes(keyword) ||
-      (user.fullName || '').toLowerCase().includes(keyword)
+      (user.fullName || '').toLowerCase().includes(keyword) ||
+      (user.userID || '').toLowerCase().includes(keyword) ||
+      (user.email || '').toLowerCase().includes(keyword)
     );
+  }
+
+  get paginatedUsers(): AdminUser[] {
+    const list = this.filteredUsers;
+    this.totalPages = Math.ceil(list.length / this.pageSize) || 1;
+    this.pagesArray = Array.from({ length: this.totalPages }, (_, i) => i + 1);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    return list.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  onSearchChange(): void {
+    this.currentPage = 1;
   }
 
   constructor(
