@@ -14,6 +14,9 @@ import type { AiAssessment, RepairRequest } from '../../../../classes/admin';
 export class AdminRepairComponent implements OnInit, OnDestroy {
   readonly statuses = [
     'Chờ xác nhận',
+    'Chờ lựa chọn của người dùng',
+    'Chờ admin cập nhật trạng thái',
+    'Đã chọn bán lại',
     'Đã hủy',
     'Đang sửa chữa',
     'Đã hoàn thành',
@@ -145,8 +148,10 @@ export class AdminRepairComponent implements OnInit, OnDestroy {
   getStatusClass(status: string | undefined): string {
     return {
       'Chờ xác nhận': 'status-pending',
-      'Đã hủy': 'status-cancelled',
       'Chờ lựa chọn của người dùng': 'status-waiting',
+      'Chờ admin cập nhật trạng thái': 'status-waiting',
+      'Đã chọn bán lại': 'status-for-sale',
+      'Đã hủy': 'status-cancelled',
       'Đang sửa chữa': 'status-progress',
       'Đã hoàn thành': 'status-completed',
       'Đã giao hàng': 'status-delivered'
@@ -156,7 +161,14 @@ export class AdminRepairComponent implements OnInit, OnDestroy {
   displayUserChoice(option: string): string {
     if (option === 'repair') return 'Sửa chữa';
     if (option === 'resell') return 'Bán lại';
+    if (option === 'reject') return 'Từ chối (Hủy yêu cầu)';
     return 'Phương án cũ không còn hỗ trợ';
+  }
+
+  hasUsableAiAssessment(request: RepairRequest): boolean {
+    return request.aiAssessmentHistory?.some(assessment =>
+      assessment.source === 'gemini' || assessment.source === 'cache'
+    ) || false;
   }
 
   getDeviceName(request: RepairRequest): string {
@@ -215,6 +227,9 @@ export class AdminRepairComponent implements OnInit, OnDestroy {
       .replace(/[đĐ]/g, 'd')
       .toLowerCase();
     if (value.includes('xac nhan')) return 'cho xac nhan';
+    if (value.includes('lua chon cua nguoi dung') || value.includes('cho lua chon')) return 'cho lua chon cua nguoi dung';
+    if (value.includes('cho admin')) return 'cho admin cap nhat trang thai';
+    if (value.includes('chon ban lai')) return 'da chon ban lai';
     if (value.includes('huy')) return 'da huy';
     if (value.includes('giao hang')) return 'da giao hang';
     if (value.includes('hoan thanh') || value.startsWith('da sua')) return 'da hoan thanh';

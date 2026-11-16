@@ -63,16 +63,25 @@ export class ProductPost implements OnInit {
       title: this.title.trim(),
       cateID: this.cateID,
       condition: this.condition,
+      price: priceNum,
       fromPrice: priceNum,
       img: this.img.trim() || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=150',
       description: this.description.trim()
     };
 
     this.productService.createProductRequest(payload).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.isSubmitting = false;
         this.toastService.showToast(res.message || 'Đã gửi yêu cầu đăng bán thành công!', 'success');
-        this.router.navigate(['/mua-hang']);
+        // Đồng bộ lại phiên đăng nhập để cập nhật vai trò SELLER và mở mục Quản lý sản phẩm ngay lập tức
+        this.authService.restoreSession().subscribe({
+          next: () => {
+            this.router.navigate(['/quan-ly-san-pham']);
+          },
+          error: () => {
+            this.router.navigate(['/quan-ly-san-pham']);
+          }
+        });
       },
       error: (err) => {
         this.isSubmitting = false;

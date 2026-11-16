@@ -4,12 +4,13 @@ import { Observable, of, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Category } from '../../../classes/category';
 import { Product } from '../../../classes/product';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
-  private _apiUrl = 'http://localhost:3000/products';
+  private _apiUrl = `${environment.apiUrl}/products`;
   private _cachedCategories: Category[] | null = null;
 
   private _searchKeywordSource = new BehaviorSubject<string>('');
@@ -56,10 +57,10 @@ export class ProductService {
   }
 
   createProductRequest(requestData: any): Observable<any> {
-    return this._http.post('http://localhost:3000/api/product-requests', requestData);
+    return this._http.post(`${environment.apiUrl}/api/product-requests`, requestData);
   }
 
   getProductRequests(): Observable<any[]> {
-    return this._http.get<any[]>('http://localhost:3000/api/product-requests');
+    return this._http.get<any[]>(`${environment.apiUrl}/api/product-requests`);
   }
 }

@@ -118,6 +118,22 @@
               <span class="request-status-badge" [class]="statusClass(item.status)"><i class="bi bi-circle-fill"></i>{{ getNormalizedAiStatus(item.aiAssessmentStatus)?.startsWith('Đang') ? getNormalizedAiStatus(item.aiAssessmentStatus) : item.status || 'Chưa sửa chữa' }}</span>
               <button type="button" class="history-link" (click)="openHistoryDetails(item)"><i class="bi bi-clock-history"></i> Xem lịch sử</button>
             </div>
+            @if (item.status === 'Chờ lựa chọn của người dùng' && hasAiAssessment(item)) {
+              <div class="processing-choice">
+                <p>Chuyên gia đã xác nhận thông tin. Vui lòng chọn phương án xử lý:</p>
+                <div class="processing-choice-actions">
+                  <button type="button" class="choice-action repair-choice" (click)="chooseProcessingOption(item, 'repair')" [disabled]="choosingOrderID === item.repairOrderID">
+                    <i class="bi bi-tools"></i> Sửa chữa
+                  </button>
+                  <button type="button" class="choice-action resell-choice" (click)="chooseProcessingOption(item, 'resell')" [disabled]="choosingOrderID === item.repairOrderID">
+                    <i class="bi bi-tag"></i> Đăng bán
+                  </button>
+                  <button type="button" class="choice-action reject-choice" (click)="chooseProcessingOption(item, 'reject')" [disabled]="choosingOrderID === item.repairOrderID">
+                    <i class="bi bi-x-circle"></i> Từ chối
+                  </button>
+                </div>
+              </div>
+            }
             @if (hasAiAssessment(item)) {
               <div class="ai-assessed-badge"><i class="bi bi-patch-check-fill"></i><span>Đã được AI đánh giá<small>{{ getAiAssessments(item).length }} kết quả Gemini</small></span></div>
             } @else if (isAiAssessmentPending(item)) {

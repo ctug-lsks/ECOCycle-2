@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 import type {
   AddGreenCoinsResponse,
   AdminOrder,
@@ -14,8 +15,8 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
-  private readonly adminUsersUrl = 'http://localhost:3000/api/admin/users';
-  private readonly adminOrdersUrl = 'http://localhost:3000/api/admin/orders';
+  private readonly adminUsersUrl = `${environment.apiUrl}/api/admin/users`;
+  private readonly adminOrdersUrl = `${environment.apiUrl}/api/admin/orders`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -35,16 +36,16 @@ export class AdminService {
   }
 
   getReports(): Observable<AdminReportsResponse> {
-    return this.http.get<AdminReportsResponse>('http://localhost:3000/api/admin/reports');
+    return this.http.get<AdminReportsResponse>(`${environment.apiUrl}/api/admin/reports`);
   }
 
   getProductRequests(): Observable<AdminProductRequestsResponse> {
-    return this.http.get<AdminProductRequestsResponse>('http://localhost:3000/api/admin/product-requests');
+    return this.http.get<AdminProductRequestsResponse>(`${environment.apiUrl}/api/admin/product-requests`);
   }
 
   updateProductRequestStatus(requestId: string, status: 'Đã duyệt' | 'Từ chối'): Observable<{ request: AdminProductRequest }> {
     return this.http.patch<{ request: AdminProductRequest }>(
-      `http://localhost:3000/api/admin/product-requests/${encodeURIComponent(requestId)}/status`,
+      `${environment.apiUrl}/api/admin/product-requests/${encodeURIComponent(requestId)}/status`,
       { status }
     );
   }

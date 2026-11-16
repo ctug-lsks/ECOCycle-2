@@ -56,8 +56,7 @@ export class Registercomponent {
       !this.email.trim() ||
       !this.password ||
       !this.province.trim() ||
-      !this.streetAddress.trim() ||
-      (this.role === 'SELLER' && (!this.businessName.trim() || !this.shopName.trim()))
+      !this.streetAddress.trim()
     ) {
       this.errorMessage =
         'Vui lòng nhập đầy đủ thông tin bắt buộc.';

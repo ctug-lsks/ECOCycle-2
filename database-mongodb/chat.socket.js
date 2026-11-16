@@ -56,9 +56,50 @@ module.exports = async function registerChat({
     ).trim();
   }
 
-  async function attachParticipantNames(data) {
+  function getInitials(name) {
+    if (!name || !name.trim()) return 'U';
+    const clean = name.trim().replace(/[^\p{L}\s\d]/gu, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'U';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  const AVATAR_PALETTES = [
+    ['#059669', '#047857'],
+    ['#2563eb', '#1d4ed8'],
+    ['#7c3aed', '#6d28d9'],
+    ['#db2777', '#be185d'],
+    ['#d97706', '#b45309'],
+    ['#0891b2', '#0e7490'],
+    ['#4f46e5', '#4338ca'],
+    ['#0d9488', '#0f766e']
+  ];
+
+  function generateLetterAvatar(name = '', seed = '', role = '') {
+    const initials = getInitials(name);
+    let c1 = '#059669';
+    let c2 = '#047857';
+    if (role === 'ADMIN' || String(seed).startsWith('AD')) {
+      c1 = '#065f46';
+      c2 = '#022c22';
+    } else {
+      let hash = 0;
+      const s = String(seed || name || 'default');
+      for (let i = 0; i < s.length; i++) {
+        hash = s.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const pair = AVATAR_PALETTES[Math.abs(hash) % AVATAR_PALETTES.length];
+      c1 = pair[0];
+      c2 = pair[1];
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#g)"/><text x="50" y="50" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="38" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">${initials}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
+  async function attachParticipantNames(data, currentUserID = '') {
     const userIDs = [
-      ...new Set(data.flatMap(item => item.participants))
+      ...new Set(data.flatMap(item => item.participants || []))
     ];
 
     const userData = await users
@@ -72,33 +113,50 @@ module.exports = async function registerChat({
       ])
     );
 
-    const defaultAvatar =
-      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
-
     const avatarMap = new Map(
-      userData.map(user => [
-        String(user.userID),
-        user.avatar || defaultAvatar
-      ])
+      userData.map(user => {
+        const hasCustomAvatar =
+          user.avatar &&
+          !user.avatar.includes('photo-1535713875002-d1d0cf377fde');
+        const av = hasCustomAvatar
+          ? user.avatar
+          : generateLetterAvatar(getFullName(user), user.userID, user.role);
+        return [String(user.userID), av];
+      })
     );
 
-    return data.map(conversation => ({
-      ...conversation,
-      participantNames: Object.fromEntries(
-        conversation.participants.map(id => [
-          id,
-          nameMap.get(id) || id
-        ])
-      ),
+    const adminUserIDs = new Set(
+      userData.filter(u => u.role === 'ADMIN').map(u => String(u.userID))
+    );
 
-      participantAvatars: Object.fromEntries(
-        conversation.participants.map(id => [
-          id,
-          avatarMap.get(String(id)) || defaultAvatar
-        ])
-      )
+    return data.map(conversation => {
+      let customerID = conversation.customerID;
+      if (!customerID && conversation.type === 'support') {
+        customerID =
+          (conversation.participants || []).find(id => !adminUserIDs.has(String(id))) ||
+          (conversation.participants || []).find(id => String(id) !== String(currentUserID)) ||
+          conversation.participants?.[0];
+      }
 
-    }));
+      return {
+        ...conversation,
+        customerID,
+        participantNames: Object.fromEntries(
+          (conversation.participants || []).map(id => [
+            id,
+            nameMap.get(id) || id
+          ])
+        ),
+
+        participantAvatars: Object.fromEntries(
+          (conversation.participants || []).map(id => [
+            id,
+            avatarMap.get(String(id)) ||
+              generateLetterAvatar(nameMap.get(id) || id, id)
+          ])
+        )
+      };
+    });
   }
   await conversations.createIndex({ participants: 1, updatedAt: -1 });
   await messages.createIndex({ conversationID: 1, createdAt: 1 });
@@ -115,6 +173,7 @@ module.exports = async function registerChat({
       }
 
       socket.data.userID = String(decoded.userID);
+      socket.data.role = decoded.role || '';
       next();
     } catch {
       next(new Error('Phiên đăng nhập hết hạn'));
@@ -124,23 +183,53 @@ module.exports = async function registerChat({
   async function getConversation(conversationID, userID) {
     if (!ObjectId.isValid(conversationID)) return null;
 
-    return conversations.findOne({
-      _id: new ObjectId(conversationID),
-      participants: userID
+    const conv = await conversations.findOne({
+      _id: new ObjectId(conversationID)
     });
+    if (!conv) return null;
+
+    if (conv.participants && conv.participants.includes(userID)) {
+      return conv;
+    }
+
+    // Nếu cuộc trò chuyện là 'support' và user là ADMIN, cho phép truy cập
+    if (conv.type === 'support') {
+      const user = await users.findOne({ userID }, { projection: { role: 1 } });
+      if (user && user.role === 'ADMIN') {
+        return conv;
+      }
+    }
+
+    return null;
   }
 
   // REST API: Danh sách cuộc trò chuyện của người đang đăng nhập
   app.get('/api/chat/conversations', authenticate, async (req, res) => {
     try {
+      const currentUser = await users.findOne(
+        { userID: req.auth.userID },
+        { projection: { role: 1 } }
+      );
+      const isAdmin = currentUser && currentUser.role === 'ADMIN';
+
+      const filter = isAdmin
+        ? {
+            $or: [
+              { participants: req.auth.userID },
+              { type: 'support', connectedToAdmin: true }
+            ]
+          }
+        : { participants: req.auth.userID };
+
       const data = await conversations
-        .find({ participants: req.auth.userID })
+        .find(filter)
         .sort({ updatedAt: -1 })
         .toArray();
 
-      const result = await attachParticipantNames(data);
+      const result = await attachParticipantNames(data, req.auth?.userID);
       res.json(result);
-    } catch {
+    } catch (err) {
+      console.error('[CHAT GET CONVERSATIONS]', err);
       res.status(500).json({ message: 'Không tải được cuộc trò chuyện' });
     }
   });
@@ -268,7 +357,10 @@ module.exports = async function registerChat({
       // Kiểm tra đã có cuộc trò chuyện hỗ trợ chưa
       const existing = await conversations.findOne({
         type: 'support',
-        participants
+        $or: [
+          { customerID: userID },
+          { participants: userID }
+        ]
       });
 
       if (existing) {
@@ -281,6 +373,8 @@ module.exports = async function registerChat({
 
       const doc = {
         type: 'support',
+        customerID: userID,
+        connectedToAdmin: false,
         participants,
         productID: '',
         status: 'OPEN',
@@ -314,7 +408,7 @@ module.exports = async function registerChat({
         }
       );
 
-      // Thông báo cho người dùng và Admin
+      // Thông báo cho người dùng
       const savedMessage = {
         ...welcomeMessage,
         _id: welcomeResult.insertedId
@@ -326,6 +420,7 @@ module.exports = async function registerChat({
           savedMessage
         );
       }
+      io.to(`chat:${result.insertedId}`).emit('chat:message', savedMessage);
 
       // Trả cuộc trò chuyện về Angular
       const [conversation] = await attachParticipantNames([
@@ -335,6 +430,8 @@ module.exports = async function registerChat({
           lastMessage: welcomeMessage.content
         }
       ]);
+
+      io.to('admins').emit('chat:conversation', conversation);
 
       res.status(201).json(conversation);
 
@@ -375,6 +472,10 @@ module.exports = async function registerChat({
           report: {
             label: 'Báo cáo vi phạm',
             reply: 'Nếu phát hiện người dùng hoặc sản phẩm vi phạm, vui lòng cung cấp thông tin và bằng chứng để Admin kiểm tra.'
+          },
+          admin: {
+            label: 'Chat với ADMIN',
+            reply: 'Yêu cầu của bạn đã được chuyển tới đội ngũ Quản trị viên EcoCycle! Quản trị viên sẽ phản hồi bạn trong giây lát. Bạn có thể gửi tin nhắn chi tiết vấn đề tại đây nhé.'
           }
         };
 
@@ -432,15 +533,18 @@ module.exports = async function registerChat({
 
         const botResult = await messages.insertOne(botMessage);
 
-        // Cập nhật tin nhắn cuối cùng
+        // Cập nhật tin nhắn cuối cùng và trạng thái kết nối Admin
+        const updateFields = {
+          lastMessage: botMessage.content,
+          updatedAt: new Date()
+        };
+        if (topicID === 'admin') {
+          updateFields.connectedToAdmin = true;
+        }
+
         await conversations.updateOne(
           { _id: conversation._id },
-          {
-            $set: {
-              lastMessage: botMessage.content,
-              updatedAt: new Date()
-            }
-          }
+          { $set: updateFields }
         );
 
         // Gửi hai tin nhắn đến người tham gia qua Socket.IO
@@ -454,10 +558,26 @@ module.exports = async function registerChat({
           _id: botResult.insertedId
         };
 
-        for (const participant of conversation.participants) {
+        for (const participant of conversation.participants || []) {
           io.to(`user:${participant}`).emit('chat:message', savedUserMessage);
           io.to(`user:${participant}`).emit('chat:message', savedBotMessage);
         }
+
+        const isConnectedToAdmin = topicID === 'admin' || conversation.connectedToAdmin;
+        if (conversation.type === 'support' && isConnectedToAdmin) {
+          io.to('admins').emit('chat:message', savedUserMessage);
+          io.to('admins').emit('chat:message', savedBotMessage);
+
+          if (topicID === 'admin' && !conversation.connectedToAdmin) {
+            const [convData] = await attachParticipantNames([{
+              ...conversation,
+              ...updateFields
+            }]);
+            io.to('admins').emit('chat:conversation', convData);
+          }
+        }
+        io.to(`chat:${conversationID}`).emit('chat:message', savedUserMessage);
+        io.to(`chat:${conversationID}`).emit('chat:message', savedBotMessage);
 
         // Trả kết quả cho Angular
         res.json({
@@ -582,9 +702,13 @@ module.exports = async function registerChat({
             _id: result.insertedId
           };
 
-          for (const participant of conversation.participants) {
+          for (const participant of conversation.participants || []) {
             io.to(`user:${participant}`).emit('chat:message', savedMessage);
           }
+          if (conversation.type === 'support') {
+            io.to('admins').emit('chat:message', savedMessage);
+          }
+          io.to(`chat:${conversation._id}`).emit('chat:message', savedMessage);
 
           res.status(201).json(savedMessage);
         } catch (err) {
@@ -624,7 +748,7 @@ module.exports = async function registerChat({
       res.sendStatus(500);
     }
   });
-  io.on('connection', socket => {
+  io.on('connection', async socket => {
     const userID = socket.data.userID;
 
     console.log('[CHAT] Socket kết nối:', {
@@ -632,7 +756,18 @@ module.exports = async function registerChat({
       userID
     });
 
-  socket.join(`user:${userID}`);
+    socket.join(`user:${userID}`);
+
+    try {
+      const currentUser = await users.findOne({ userID }, { projection: { role: 1 } });
+      if (currentUser && currentUser.role === 'ADMIN') {
+        socket.join('admins');
+        console.log(`[CHAT] Admin ${userID} đã tham gia room 'admins'`);
+      }
+    } catch (e) {
+      console.error('[CHAT] Lỗi kiểm tra vai trò admin cho socket:', e);
+    }
+
     socket.on('chat:join', async (conversationID, callback) => {
       try {
         const conversation = await getConversation(conversationID, userID);
@@ -679,14 +814,17 @@ module.exports = async function registerChat({
 
         const result = await messages.insertOne(doc);
 
+        const updateFields = {
+          lastMessage: content,
+          updatedAt: now
+        };
+        if (conversation.type === 'support') {
+          updateFields.connectedToAdmin = true;
+        }
+
         await conversations.updateOne(
           { _id: conversation._id },
-          {
-            $set: {
-              lastMessage: content,
-              updatedAt: now
-            }
-          }
+          { $set: updateFields }
         );
 
         const savedMessage = {
@@ -695,9 +833,23 @@ module.exports = async function registerChat({
         };
 
         // Gửi cho tất cả thành viên cuộc trò chuyện
-        for (const participant of conversation.participants) {
+        for (const participant of conversation.participants || []) {
           io.to(`user:${participant}`).emit('chat:message', savedMessage);
         }
+
+        if (conversation.type === 'support') {
+          io.to('admins').emit('chat:message', savedMessage);
+
+          if (!conversation.connectedToAdmin) {
+            const [convData] = await attachParticipantNames([{
+              ...conversation,
+              ...updateFields
+            }]);
+            io.to('admins').emit('chat:conversation', convData);
+          }
+        }
+
+        io.to(`chat:${conversationID}`).emit('chat:message', savedMessage);
 
         callback?.({ ok: true, message: savedMessage });
       } catch {

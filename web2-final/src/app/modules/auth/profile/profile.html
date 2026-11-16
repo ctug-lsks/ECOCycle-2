@@ -17,7 +17,7 @@
       <div>
         <p class="eyebrow">HỒ SƠ TÀI KHOẢN</p>
         <h1>{{ account.fullName || account.userName }}</h1>
-        <p>{{ account.userID }} · {{ account.role === 'SELLER' ? 'Cửa hàng' : account.role === 'ADMIN' ? 'Quản trị viên' : 'Người mua' }}</p>
+        <p>{{ account.role === 'SELLER' ? 'Cửa hàng' : account.role === 'ADMIN' ? 'Quản trị viên' : 'Người mua' }}</p>
       </div>
       @if (uploadingAvatar) { <span class="avatar-upload-status" role="status">Đang tải ảnh đại diện...</span> }
     </header>

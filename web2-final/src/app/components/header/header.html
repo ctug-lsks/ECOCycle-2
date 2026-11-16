@@ -1,44 +1,101 @@
 <header class="site-header">
-  <div class="header-card">
+  <div class="header-card" [class.admin-header-card]="currentUser()?.role === 'ADMIN'">
     
-    <a class="logo" routerLink="/">
+    <a class="logo" [routerLink]="currentUser()?.role === 'ADMIN' ? '/admin/quan-ly-tai-khoan' : '/'">
       <img class="logo-mark" src="./assets/ecocycle-logo.svg" alt="ECOCycle logo">
       <span class="logo-text">ECOCycle</span>
     </a>
 
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="7"/>
-        <path d="m21 21-4.3-4.3"/>
-      </svg>
+    @if (currentUser()?.role !== 'ADMIN') {
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m21 21-4.3-4.3"/>
+        </svg>
 
-      <input 
-        type="text" 
-        [value]="searchTerm()"
-        (input)="onSearchInput($any($event.target).value)"
-        (keyup.enter)="onSearch()"
-        placeholder="Bạn muốn tìm thiết bị hay linh kiện gì hôm nay..."
-        aria-label="Tìm kiếm"
-      />
-    </div>
+        <input 
+          type="text" 
+          [value]="searchTerm()"
+          (input)="onSearchInput($any($event.target).value)"
+          (keyup.enter)="onSearch()"
+          placeholder="Bạn muốn tìm thiết bị hay linh kiện gì hôm nay..."
+          aria-label="Tìm kiếm"
+        />
+      </div>
+    }
+
+    @if (currentUser()?.role === 'ADMIN') {
+      <nav class="main-nav admin-nav" [class.is-open]="isMenuOpen()">
+        <a
+          routerLink="/admin/quan-ly-tai-khoan"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Quản lý tài khoản
+        </a>
+        <a
+          routerLink="/admin/quan-ly-dang-ban"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Quản lý đăng bán
+        </a>
+        <a
+          routerLink="/admin/quan-ly-sua-chua"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Quản lý sửa chữa
+        </a>
+        <a
+          routerLink="/admin/quan-ly-van-chuyen"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Quản lý vận chuyển
+        </a>
+        <a
+          routerLink="/admin/bao-cao-he-thong"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Báo cáo hệ thống
+        </a>
+        <a
+          routerLink="/moi-truong"
+          routerLinkActive="is-active"
+          (click)="closeMenu()"
+          class="admin-nav-item"
+        >
+          Môi trường
+        </a>
+      </nav>
+    }
 
     <div class="header-right flex items-center gap-2">
-      <nav class="main-nav" [class.is-open]="isMenuOpen()">
-        @for (item of navItems(); track item.href) {
-          <a
-            [routerLink]="item.href"
-            routerLinkActive="is-active"
-            [routerLinkActiveOptions]="{ exact: false }"
-            (click)="closeMenu()"
-          >
-            {{ item.label }}
-          </a>
-        }
-      </nav>
+      @if (currentUser()?.role !== 'ADMIN') {
+        <nav class="main-nav" [class.is-open]="isMenuOpen()">
+          @for (item of navItems(); track item.href) {
+            <a
+              [routerLink]="item.href"
+              routerLinkActive="is-active"
+              [routerLinkActiveOptions]="{ exact: false }"
+              (click)="closeMenu()"
+            >
+              {{ item.label }}
+            </a>
+          }
+        </nav>
+      }
 
       <div class="header-actions">
         
-        @if (currentUser()) {
+        @if (currentUser() && currentUser()?.role !== 'ADMIN') {
         <a 
           routerLink="/green-coin" 
           class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80 rounded-full text-xs font-extrabold text-amber-800 transition-all shadow-sm"
@@ -185,6 +242,7 @@
         </div>
         }
 
+        @if (currentUser()?.role !== 'ADMIN') {
         <a
           class="icon-btn cart-btn"
           routerLink="/gio-hang"
@@ -201,6 +259,7 @@
             <span class="cart-badge">{{ cartCount() }}</span>
           }
         </a>
+        }
 
         <div class="relative" data-header-popup>
           <button 
@@ -222,7 +281,7 @@
 
                 <div class="header-user-avatar">
                   <img
-                    [src]="currentUser()?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'"
+                    [src]="getUserAvatar()"
                     alt="Ảnh đại diện tài khoản"
                   />
                 </div>
@@ -235,10 +294,6 @@
 
                   @if (currentUser()) {
                     <div class="account-role-info">
-                      <span class="account-user-id">
-                        {{ currentUser()?.userID }}
-                      </span>
-
                       <span class="account-role">
                         {{ getRoleLabel(currentUser()?.role) }}
                       </span>
@@ -262,19 +317,24 @@
                     <i class="bi bi-bag-check text-emerald-600 text-sm" aria-hidden="true"></i>
                     <span>Đơn mua</span>
                   </a>
-                }
-
-                @if (currentUser()?.role === 'SELLER') {
                   <a routerLink="/dang-ban" (click)="closeUserDropdown()" class="header-user-menu-link" role="menuitem">
                     <i class="bi bi-plus-circle text-emerald-600 text-sm" aria-hidden="true"></i>
-                    <span>Đăng bán thiết bị</span>
+                    <span>Đăng bán thiết bị cũ</span>
                   </a>
                 }
 
-                @if (currentUser()?.role === 'ADMIN') {
-                  <a routerLink="/admin" (click)="closeUserDropdown()" class="header-user-menu-link" role="menuitem">
-                    <i class="bi bi-tools text-emerald-600 text-sm" aria-hidden="true"></i>
-                    <span>Quản lý hệ thống</span>
+                @if (currentUser()?.role === 'SELLER') {
+                  <a routerLink="/quan-ly-san-pham" (click)="closeUserDropdown()" class="header-user-menu-link" role="menuitem">
+                    <i class="bi bi-box-seam text-emerald-600 text-sm" aria-hidden="true"></i>
+                    <span>Quản lý sản phẩm</span>
+                  </a>
+                  <a routerLink="/don-hang-da-dat" (click)="closeUserDropdown()" class="header-user-menu-link" role="menuitem">
+                    <i class="bi bi-bag-check text-emerald-600 text-sm" aria-hidden="true"></i>
+                    <span>Đơn mua</span>
+                  </a>
+                  <a routerLink="/dang-ban" (click)="closeUserDropdown()" class="header-user-menu-link" role="menuitem">
+                    <i class="bi bi-plus-circle text-emerald-600 text-sm" aria-hidden="true"></i>
+                    <span>Đăng bán thiết bị</span>
                   </a>
                 }
 

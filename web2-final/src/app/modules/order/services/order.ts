@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OrderService {
-  private _apiUrl = 'http://localhost:3000/orders';
-  private _usersUrl = 'http://localhost:3000/users';
+  private _apiUrl = `${environment.apiUrl}/orders`;
+  private _usersUrl = `${environment.apiUrl}/users`;
   private _currentUserId = '';
 
   constructor(

@@ -1,7 +1,8 @@
 <main class="admin-page">
   <header class="admin-heading">
     <div>
-      <p class="eyebrow"><i class="bi bi-tools"></i> Quản lý sửa chữa</p>
+      <span class="eyebrow"><i class="bi bi-shield-check"></i> HỆ THỐNG QUẢN TRỊ</span>
+      <h1>Quản lý sửa chữa</h1>
       <p class="muted">Theo dõi báo cáo và xử lý yêu cầu sửa chữa của người dùng.</p>
     </div>
     <div class="admin-heading-mark" aria-hidden="true"><i class="bi bi-wrench-adjustable-circle"></i></div>
@@ -67,11 +68,19 @@
               <i class="bi bi-eye"></i> Xem chi tiết
             </button>
             @if (displayStatus(request.status) === 'Chờ xác nhận') {
-              <button type="button" class="expert-route-button" (click)="requestStatusConfirmation(request, 'Đang sửa chữa')" [disabled]="updatingStatusID === request.repairOrderID">
-                <i class="bi bi-check2-circle"></i> Xác nhận
+              <button type="button" class="expert-route-button" (click)="requestStatusConfirmation(request, hasUsableAiAssessment(request) ? 'Chờ lựa chọn của người dùng' : 'Đang sửa chữa')" [disabled]="updatingStatusID === request.repairOrderID">
+                <i class="bi bi-check2-circle"></i> {{ hasUsableAiAssessment(request) ? 'Xác nhận thông tin' : 'Xác nhận sửa chữa' }}
               </button>
               <button type="button" class="delete-button" (click)="requestStatusConfirmation(request, 'Đã hủy')" [disabled]="updatingStatusID === request.repairOrderID">
                 <i class="bi bi-x-circle"></i> Từ chối
+              </button>
+            }
+            @if (displayStatus(request.status) === 'Đã chọn bán lại') {
+              <span class="choice-note"><i class="bi bi-tag"></i> Người dùng đã chọn bán lại</span>
+            }
+            @if (displayStatus(request.status) === 'Chờ admin cập nhật trạng thái') {
+              <button type="button" class="expert-route-button" (click)="requestStatusConfirmation(request, 'Đang sửa chữa')" [disabled]="updatingStatusID === request.repairOrderID">
+                <i class="bi bi-tools"></i> Xác nhận sửa chữa
               </button>
             }
             @if (displayStatus(request.status) !== 'Đã hủy' && displayStatus(request.status) === 'Đang sửa chữa') {

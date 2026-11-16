@@ -84,6 +84,7 @@ export class RepairComponent implements OnInit, OnDestroy {
   aiMessage = '';
   aiAssessment: AiAssessment | null = null;
   confirmationDialog: ConfirmationDialog | null = null;
+  choosingOrderID: string | null = null;
   readonly resaleConditions = ['Mới 99%', 'Mới 95%', 'Mới 90%', 'Đã qua sử dụng'];
   private aiPollTimeout?: ReturnType<typeof setTimeout>;
   private routeQuerySubscription?: Subscription;
@@ -200,6 +201,8 @@ export class RepairComponent implements OnInit, OnDestroy {
       case 'Đã chọn bán lại':
         return 'status-for-sale';
       case 'Chờ admin cập nhật trạng thái':
+        return 'status-waiting-user';
+      case 'Chờ lựa chọn của người dùng':
         return 'status-waiting-user';
       case 'Đã chọn phương án':
         return 'status-option-selected';
@@ -693,6 +696,57 @@ export class RepairComponent implements OnInit, OnDestroy {
         request.aiAssessmentStatus = this.normalizeAiAssessmentStatus(error?.error?.message || 'Đang chờ Gemini đánh giá');
         this.changeDetector.markForCheck();
         this.toastService.showToast(safeMessage, 'info', 'Đang chờ Gemini đánh giá', 7000);
+      }
+    });
+  }
+
+  chooseProcessingOption(request: RepairRequest, option: 'repair' | 'resell' | 'reject'): void {
+    if (!request.repairOrderID || request.status !== 'Chờ lựa chọn của người dùng' || this.choosingOrderID) {
+      return;
+    }
+    const optionLabel = option === 'repair' ? 'Sửa chữa' : option === 'resell' ? 'Đăng bán' : 'Từ chối (Hủy yêu cầu)';
+    this.openConfirmation({
+      title: `Xác nhận ${option === 'reject' ? 'từ chối' : 'chọn ' + optionLabel}`,
+      message: option === 'reject' 
+        ? `Bạn có chắc muốn từ chối phương án và hủy yêu cầu sửa chữa ${request.repairOrderID}?` 
+        : `Bạn muốn chọn phương án ${optionLabel} cho yêu cầu ${request.repairOrderID}?`,
+      confirmLabel: option === 'reject' ? 'Xác nhận hủy yêu cầu' : `Chọn ${optionLabel}`,
+      icon: option === 'repair' ? 'bi-tools' : option === 'resell' ? 'bi-tag' : 'bi-x-circle',
+      action: () => this.submitProcessingOption(request, option)
+    });
+  }
+
+  private submitProcessingOption(request: RepairRequest, option: 'repair' | 'resell' | 'reject'): void {
+    if (!request.repairOrderID) return;
+    this.choosingOrderID = request.repairOrderID;
+    this.repairService.chooseOption(request.repairOrderID, option).subscribe({
+      next: response => {
+        request.status = response.status;
+        request.userChoice = response.userChoice;
+        this.choosingOrderID = null;
+        if (option === 'resell') {
+          // Làm mới session để tài khoản cập nhật ngay vai trò SELLER và mở mục Quản lý sản phẩm trên Header
+          this.authService.restoreSession().subscribe();
+        }
+        this.toastService.showToast(
+          option === 'repair'
+            ? 'Đã chọn sửa chữa. Admin sẽ xác nhận và tiếp tục xử lý.'
+            : option === 'resell'
+              ? 'Đã chọn đăng bán. Thiết bị đã được đưa lên sàn và bạn đã trở thành Người bán!'
+              : 'Đã hủy yêu cầu sửa chữa thành công.',
+          'success',
+          'Đã ghi nhận lựa chọn'
+        );
+        this.changeDetector.markForCheck();
+      },
+      error: error => {
+        this.choosingOrderID = null;
+        this.toastService.showToast(
+          error.error?.message || 'Không thể ghi nhận lựa chọn.',
+          'error',
+          'Lỗi cập nhật'
+        );
+        this.changeDetector.markForCheck();
       }
     });
   }

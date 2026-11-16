@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { ProductList } from './modules/marketplace/components/product-list/product-list';
 import { ProductDetail } from './modules/marketplace/components/product-detail/product-detail';
 import { ProductPost } from './modules/marketplace/components/product-post/product-post';
+import { SellerProducts } from './modules/marketplace/components/seller-products/seller-products';
 import { Cart } from './modules/order/components/cart/cart';
 import { Checkout } from './modules/order/components/checkout/checkout';
 import { OrdersList } from './modules/order/components/orders-list/orders-list';
@@ -19,23 +20,25 @@ import { AdminPostManagement } from './modules/admin/components/admin-post-manag
 import { AdminAccounts } from './modules/admin/components/admin-accounts/admin-accounts';
 import { EnvironmentDashboard } from './modules/environment/components/environment-dashboard/environment-dashboard';
 import { ChatPageComponent } from './modules/chat/components/chat-page/chat-page';
+import { authGuard, adminGuard, sellerGuard } from './guards/auth.guard';
 
 const routes: Routes = [
   { path: '', redirectTo: 'mua-hang', pathMatch: 'full' },
   { path: 'mua-hang', component: ProductList },
   { path: 'san-pham/:id', component: ProductDetail },
-  { path: 'dang-ban', component: ProductPost },
+  { path: 'dang-ban', component: ProductPost, canActivate: [authGuard] },
+  { path: 'quan-ly-san-pham', component: SellerProducts, canActivate: [sellerGuard] },
   { path: 'gio-hang', component: Cart },
-  { path: 'thanh-toan', component: Checkout },
-  { path: 'don-hang-da-dat', component: OrdersList },
-  { path: 'chi-tiet-don-hang/:id', component: OrderDetail },
+  { path: 'thanh-toan', component: Checkout, canActivate: [authGuard] },
+  { path: 'don-hang-da-dat', component: OrdersList, canActivate: [authGuard] },
+  { path: 'chi-tiet-don-hang/:id', component: OrderDetail, canActivate: [authGuard] },
   { path: 'login', component: Logincomponent },
   { path: 'register', component: Registercomponent },
-  { path: 'tai-khoan', component: ProfileComponent },
+  { path: 'tai-khoan', component: ProfileComponent, canActivate: [authGuard] },
   { path: 'sua-chua', component: RepairComponent },
   { path: 'moi-truong', component: EnvironmentDashboard },
-  { path: 'tin-nhan', component: ChatPageComponent },
-  {path: 'admin', component: ManagementDashboard,
+  { path: 'tin-nhan', component: ChatPageComponent, canActivate: [authGuard] },
+  { path: 'admin', component: ManagementDashboard, canActivate: [adminGuard],
     children: [
       { path: '', redirectTo: 'quan-ly-tai-khoan', pathMatch: 'full' },
       { path: 'quan-ly-tai-khoan', component: AdminAccounts },

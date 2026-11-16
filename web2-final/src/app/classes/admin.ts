@@ -63,6 +63,10 @@ export interface RepairRequest {
   customerID?: string;
   customer?: RepairCustomer;
   saleListingID?: string;
+  userChoice?: {
+    option: 'repair' | 'resell' | 'reject';
+    chosenAt: string;
+  };
 }
 
 export interface RepairCustomer {

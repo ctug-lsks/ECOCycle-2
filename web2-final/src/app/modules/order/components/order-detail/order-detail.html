@@ -77,7 +77,7 @@
         </h2>
 
         <div class="flex flex-col gap-3">
-          @for (item of order.items; track item.productId) {
+          @for (item of (order.items || order.products || []); track (item.productId || item.productID || item.title)) {
             <div class="flex items-center justify-between gap-4 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-100">
               <img [src]="item.img || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=150'" [alt]="item.title" class="w-16 h-16 object-contain rounded-xl bg-white p-1.5 border border-gray-100 flex-shrink-0" />
               
@@ -90,7 +90,7 @@
               </div>
 
               <div class="text-xs font-extrabold text-gray-900 flex-shrink-0">
-                {{ formatPrice(item.price * item.quantity) }}
+                {{ formatPrice(calcItemTotal(item.price, item.quantity)) }}
               </div>
             </div>
           }

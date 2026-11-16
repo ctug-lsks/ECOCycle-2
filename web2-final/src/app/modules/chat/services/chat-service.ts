@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { AuthService } from '../../../services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 export interface ChatConversation {
   _id: string;
@@ -15,6 +16,7 @@ export interface ChatConversation {
   createdAt: string;
   updatedAt: string;
   type?: 'product' | 'support';
+  customerID?: string;
 }
 
 export interface ChatMessage {
@@ -37,8 +39,8 @@ export interface ChatAck {
   providedIn: 'root'
 })
 export class ChatService {
-  private readonly apiUrl = 'http://localhost:3000/api/chat';
-  private readonly socketUrl = 'http://localhost:3000';
+  private readonly apiUrl = `${environment.apiUrl}/api/chat`;
+  private readonly socketUrl = environment.apiUrl;
 
   private socket: Socket | null = null;
 
@@ -124,7 +126,7 @@ export class ChatService {
 
   getChatImage(imageUrl: string): Observable<Blob> {
     return this.http.get(
-      `http://localhost:3000${imageUrl}`,
+      `${environment.apiUrl}${imageUrl}`,
       { responseType: 'blob' }
     );
   }

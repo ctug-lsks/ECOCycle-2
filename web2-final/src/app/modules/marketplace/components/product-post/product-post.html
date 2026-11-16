@@ -11,24 +11,14 @@
       </div>
     </div>
 
-    <!-- Banner chính sách Green Coin theo Role -->
-    @if (currentUser?.role === 'SELLER') {
-      <div class="mb-6 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5">
-        <i class="bi bi-info-circle-fill text-amber-600 text-sm mt-0.5 flex-shrink-0"></i>
-        <div class="leading-relaxed">
-          <p class="font-bold">Chính sách dành cho Người bán (SELLER):</p>
-          <p class="text-amber-800 mt-0.5">Tài khoản Người bán đăng sản phẩm kinh doanh thương mại sẽ không áp dụng tích lũy Green Coin. Sản phẩm sau khi được Admin phê duyệt sẽ hiển thị trực tiếp trên sàn Mua sắm.</p>
-        </div>
+    <!-- Banner ưu đãi Green Coin -->
+    <div class="mb-6 p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 text-xs flex items-start gap-2.5">
+      <i class="bi bi-coin text-amber-500 text-base mt-0.5 flex-shrink-0"></i>
+      <div class="leading-relaxed">
+        <p class="font-bold">Ưu đãi Tái chế Xanh:</p>
+        <p class="text-emerald-800 mt-0.5">Tham gia bảo vệ môi trường! Bạn sẽ nhận ngay <b class="text-amber-700 font-extrabold">+1.000 Green Coin</b> sau khi sản phẩm tái chế của bạn được Admin duyệt lên sàn.</p>
       </div>
-    } @else {
-      <div class="mb-6 p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 text-xs flex items-start gap-2.5">
-        <i class="bi bi-coin text-amber-500 text-base mt-0.5 flex-shrink-0"></i>
-        <div class="leading-relaxed">
-          <p class="font-bold">Ưu đãi Tái chế Xanh dành cho Khách hàng:</p>
-          <p class="text-emerald-800 mt-0.5">Tham gia bảo vệ môi trường! Bạn sẽ nhận ngay <b class="text-amber-700 font-extrabold">+1.000 Green Coin</b> sau khi sản phẩm tái chế của bạn được Admin duyệt lên sàn.</p>
-        </div>
-      </div>
-    }
+    </div>
 
     @if (errorMessage) {
       <div class="mb-6 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">

@@ -55,6 +55,13 @@ export class OrderDetail implements OnInit {
     this.router.navigate(['/don-hang-da-dat']);
   }
 
+  calcItemTotal(price: any, qty: any): number {
+    const q = Number(qty) || 1;
+    if (typeof price === 'number') return price * q;
+    const num = parseFloat(String(price || 0).replace(/[^0-9]/g, '')) || 0;
+    return num * q;
+  }
+
   formatPrice(val: any): string {
     if (val === undefined || val === null || val === '') return '0₫';
     if (typeof val === 'number') {

@@ -1,7 +1,8 @@
 <main class="admin-page">
   <header class="admin-heading">
     <div>
-      <p class="eyebrow"><i class="bi bi-people"></i> Quản lý tài khoản</p>
+      <span class="eyebrow"><i class="bi bi-shield-check"></i> HỆ THỐNG QUẢN TRỊ</span>
+      <h1>Quản lý tài khoản</h1>
       <p class="muted">Theo dõi thông tin tài khoản người dùng.</p>
     </div>
     <div class="admin-heading-mark" aria-hidden="true"><i class="bi bi-person-vcard"></i></div>
@@ -48,7 +49,7 @@
             <div class="coin-balance"><i class="bi bi-coin"></i><strong>{{ formatNumber(user.greenCoins) }}</strong><small>GreenCoin</small></div>
             <div class="account-actions">
               <button type="button" class="details-button" (click)="openDetails(user)"><i class="bi bi-eye"></i> Xem chi tiết</button>
-              @if (user.role === 'CUSTOMER') {
+              @if (user.role === 'CUSTOMER' || user.role === 'SELLER') {
                 <button type="button" class="coin-button" (click)="openGreenCoinForm(user)"><i class="bi bi-plus-circle"></i> Thêm GreenCoin</button>
               }
             </div>

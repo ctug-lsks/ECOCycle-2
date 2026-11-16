@@ -69,6 +69,10 @@ export class EnvironmentDashboard implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef
   ) {}
 
+  get isAdmin(): boolean {
+    return this.authService.currentUser?.role === 'ADMIN';
+  }
+
   ngOnInit(): void {
     this.loadCommunity();
 
@@ -79,7 +83,7 @@ export class EnvironmentDashboard implements OnInit, OnDestroy {
       this.personal = null;
       this.personalError = '';
 
-      if (this.isLoggedIn) {
+      if (this.isLoggedIn && !this.isAdmin) {
         this.loadPersonal();
       } else {
         this.loadingPersonal = false;
@@ -194,7 +198,10 @@ export class EnvironmentDashboard implements OnInit, OnDestroy {
       : 100 - this.reusePercent;
   }
 
-  formatNumber(value: number): string {
+  formatNumber(value?: number | null): string {
+    if (value === undefined || value === null || !Number.isFinite(value)) {
+      return '0';
+    }
     return value.toLocaleString('vi-VN', {
       maximumFractionDigits: 2
     });

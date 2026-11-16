@@ -124,6 +124,62 @@
   outline-offset: 3px;
 }
 
+.main-nav.admin-nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0 auto;
+}
+
+.header-card.admin-header-card {
+  max-width: 1240px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-header-card .logo {
+  flex: 0 0 170px;
+}
+
+.admin-header-card .header-right {
+  flex: 0 0 170px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.main-nav.admin-nav a.admin-nav-item {
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.main-nav.admin-nav a.admin-nav-item.is-active {
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .admin-header-card .logo {
+    flex: 0 0 auto;
+  }
+  .admin-header-card .header-right {
+    flex: 0 0 auto;
+  }
+  .main-nav.admin-nav {
+    gap: 2px;
+  }
+  .main-nav.admin-nav a.admin-nav-item {
+    font-size: 12.5px;
+    padding: 7px 9px;
+  }
+}
+
 
 .header-actions {
   display: flex;

@@ -16,6 +16,7 @@ import {
 } from '../../services/chat-service';
 
 import { AuthService } from '../../../../services/auth.service';
+import { getAvatarUrl } from '../../../../utils/avatar.util';
 
 @Component({
   selector: 'app-chat-page',
@@ -51,6 +52,11 @@ export class ChatPageComponent implements OnInit, OnDestroy {
       id: 'report',
       label: 'Báo cáo vi phạm',
       icon: 'https://cdn-icons-png.flaticon.com/128/2058/2058160.png'
+    },
+    {
+      id: 'admin',
+      label: 'Chat với ADMIN',
+      icon: 'https://cdn-icons-png.flaticon.com/128/9408/9408175.png'
     }
   ];
 
@@ -440,27 +446,98 @@ export class ChatPageComponent implements OnInit, OnDestroy {
     const myID = String(
       (this.authService.currentUser as any)?.userID || ''
     );
+    const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
 
-    return conversation.participants.find(
-      id => id !== myID
+    if (conversation.type === 'support' && isAdmin) {
+      if (conversation.customerID && String(conversation.customerID) !== myID) {
+        return conversation.customerID;
+      }
+      const otherPerson = (conversation.participants || []).find(
+        id => String(id) !== myID
+      );
+      if (otherPerson) return otherPerson;
+    }
+
+    return (conversation.participants || []).find(
+      id => String(id) !== myID
     ) || 'Người dùng';
   }
 
   getOtherUserName(conversation: ChatConversation): string {
+    const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
+
     if (conversation.type === 'support') {
-      return 'Hỗ trợ EcoCycle';
+      if (!isAdmin) {
+        return 'Hỗ trợ EcoCycle';
+      }
+      const customerID = this.getOtherUserID(conversation);
+      const name = conversation.participantNames?.[customerID];
+      if (name && name !== customerID) return name;
+      return name || customerID || 'Khách hàng';
     }
 
     const otherUserID = this.getOtherUserID(conversation);
     return conversation.participantNames?.[otherUserID] || otherUserID;
   }
+
   getOtherUserAvatar(conversation: ChatConversation): string {
-    const defaultAvatar =
-      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
+    const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
+
+    if (conversation.type === 'support') {
+      if (!isAdmin) {
+        return 'https://cdn-icons-png.flaticon.com/128/12441/12441159.png';
+      }
+      const customerID = this.getOtherUserID(conversation);
+      const name = this.getOtherUserName(conversation);
+      return getAvatarUrl(
+        conversation.participantAvatars?.[customerID],
+        name,
+        customerID
+      );
+    }
 
     const otherUserID = this.getOtherUserID(conversation);
+    const otherUserName = this.getOtherUserName(conversation);
+    return getAvatarUrl(
+      conversation.participantAvatars?.[otherUserID],
+      otherUserName,
+      otherUserID
+    );
+  }
 
-    return conversation.participantAvatars?.[otherUserID] || defaultAvatar;
+  getMessageSenderAvatar(message: ChatMessage): string {
+    if (!this.selectedConversation) {
+      return getAvatarUrl(null, 'Người dùng');
+    }
+
+    if (this.selectedConversation.type === 'support') {
+      const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
+      const myID = String((this.authService.currentUser as any)?.userID || '');
+      if (!isAdmin && String(message.senderID) !== myID) {
+        return 'https://cdn-icons-png.flaticon.com/128/12441/12441159.png';
+      }
+    }
+
+    const senderID = String(message.senderID);
+    const senderName = this.getMessageSenderName(message);
+    const avatar = this.selectedConversation.participantAvatars?.[senderID];
+    return getAvatarUrl(avatar, senderName, senderID);
+  }
+
+  getMessageSenderName(message: ChatMessage): string {
+    if (!this.selectedConversation) return '';
+
+    if (this.selectedConversation.type === 'support') {
+      const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
+      if (!isAdmin) {
+        return 'Hỗ trợ EcoCycle';
+      }
+    }
+
+    return (
+      this.selectedConversation.participantNames?.[message.senderID] ||
+      this.getOtherUserName(this.selectedConversation)
+    );
   }
 
   isMyMessage(message: ChatMessage): boolean {
@@ -472,20 +549,24 @@ export class ChatPageComponent implements OnInit, OnDestroy {
   }
   conversationSearch = '';
 
-
   get filteredConversations() {
     const keyword = this.conversationSearch.trim().toLowerCase();
+    const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
 
-    // Chỉ hiển thị các cuộc trò chuyện mua bán
-    const productConversations = this.conversations.filter(
-      conversation => !('type' in conversation && conversation.type === 'support')
-    );
+    // Đối với người dùng thường: lọc bỏ support conversation vì đã có nút ghim
+    // Đối với Admin: hiển thị toàn bộ bao gồm cả support conversations!
+    const availableConversations = this.conversations.filter(conversation => {
+      if (conversation.type === 'support') {
+        return isAdmin;
+      }
+      return true;
+    });
 
     if (!keyword) {
-      return productConversations;
+      return availableConversations;
     }
 
-    return productConversations.filter(conversation => {
+    return availableConversations.filter(conversation => {
       const userName = this.getOtherUserName(conversation).toLowerCase();
       const userID = this.getOtherUserID(conversation).toLowerCase();
       const lastMessage = String(conversation.lastMessage ?? '').toLowerCase();

@@ -5,6 +5,7 @@ import { BehaviorSubject } from 'rxjs';
 import { Product } from '../../../classes/product';
 import { ToastService } from '../../../services/toast';
 import { AuthService } from '../../../services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -58,7 +59,7 @@ export class CartService {
     this.writeStorage(this.getCartStorageKey(), JSON.stringify(cart));
     this.syncCartCount();
     if (!this._currentUserId) return;
-    this._http.post(`http://localhost:3000/carts/${this._currentUserId}`, { items: cart }).subscribe({
+    this._http.post(`${environment.apiUrl}/carts/${this._currentUserId}`, { items: cart }).subscribe({
       error: (err) => console.warn('Lỗi đồng bộ giỏ hàng tới MongoDB backend:', err)
     });
   }
@@ -68,7 +69,7 @@ export class CartService {
       this._cartCountSource.next(0);
       return;
     }
-    this._http.get<any[]>(`http://localhost:3000/carts/${this._currentUserId}`).subscribe({
+    this._http.get<any[]>(`${environment.apiUrl}/carts/${this._currentUserId}`).subscribe({
       next: (items) => {
         if (items) {
           this.writeStorage(this.getCartStorageKey(), JSON.stringify(items));
@@ -171,7 +172,7 @@ export class CartService {
   clearCart(): void {
     localStorage.removeItem(this.getCartStorageKey());
     this.syncCartCount();
-    this._http.delete(`http://localhost:3000/carts/${this._currentUserId}`).subscribe();
+    this._http.delete(`${environment.apiUrl}/carts/${this._currentUserId}`).subscribe();
   }
 
   setSelectedCheckoutItems(items: any[]): void {

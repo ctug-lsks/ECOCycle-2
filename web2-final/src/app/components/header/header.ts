@@ -8,6 +8,8 @@ import { NotificationItem } from '../../classes/notification';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../classes/user';
 import type { NavItem } from '../../classes/admin';
+import { environment } from '../../../environments/environment';
+import { getAvatarUrl } from '../../utils/avatar.util';
 
 @Component({
   selector: 'app-header',
@@ -80,7 +82,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   // Hồ sơ và thông báo
   loadUserProfile(userID: string): void {
-    this.http.get<User>(`http://localhost:3000/users/${encodeURIComponent(userID)}`).subscribe({
+    this.http.get<User>(`${environment.apiUrl}/users/${encodeURIComponent(userID)}`).subscribe({
       next: (user) => {
         if (user && user.greenCoins !== undefined) {
           this.userCoins.set(user.greenCoins);
@@ -99,7 +101,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.notificationLoading) return;
     this.notificationLoading = true;
     const requestedUserID = userID;
-    this.http.get<NotificationItem[]>('http://localhost:3000/notifications').subscribe({
+    this.http.get<NotificationItem[]>(`${environment.apiUrl}/notifications`).subscribe({
       next: (data) => {
         this.notificationLoading = false;
         if (this.currentUser()?.userID !== requestedUserID) return;
@@ -153,7 +155,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   onNotificationClick(item: NotificationItem): void {
     if (!item.isRead && item.notificationID) {
       this.http.put(
-        `http://localhost:3000/notifications/${encodeURIComponent(item.notificationID)}/read`,
+        `${environment.apiUrl}/notifications/${encodeURIComponent(item.notificationID)}/read`,
         {}
       ).subscribe({
         next: () => {
@@ -176,7 +178,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
         queryParams: { orderID: item.targetID }
       });
     } else if (item.targetID && item.targetID.startsWith('RP') && item.type === 'repair_admin') {
-      this.router.navigate(['/admin'], {
+      this.router.navigate(['/admin/quan-ly-sua-chua'], {
         queryParams: { repairOrderID: item.targetID }
       });
     } else if (item.targetID && item.targetID.startsWith('RP')) {
@@ -192,7 +194,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     const userID = this.currentUser()?.userID;
     if (!userID) return;
 
-    this.http.put('http://localhost:3000/notifications/read-all', {}).subscribe({
+    this.http.put(`${environment.apiUrl}/notifications/read-all`, {}).subscribe({
       next: () => {
         const updated = this.notifications().map(n => ({ ...n, isRead: true }));
         this.notifications.set(updated);
@@ -283,6 +285,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   isIconRouteActive(path: string): boolean {
     return this.router.url.split('?')[0].split('#')[0] === path;
+  }
+  getUserAvatar(): string {
+    const user = this.currentUser();
+    return getAvatarUrl(
+      user?.avatar,
+      user?.fullName || user?.userName,
+      user?.userID,
+      user?.role
+    );
   }
   getRoleLabel(role?: string): string {
     switch (role) {

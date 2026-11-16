@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import type {
   AiAssessment,
   DeviceAssessment,
@@ -11,7 +12,7 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class RepairService {
-  private readonly apiBaseUrl = 'http://localhost:3000/api';
+  private readonly apiBaseUrl = `${environment.apiUrl}/api`;
   private readonly apiUrl = `${this.apiBaseUrl}/repair-requests`;
 
   constructor(private http: HttpClient) {}
@@ -44,6 +45,16 @@ export class RepairService {
     return this.http.put<{ message: string; status: string }>(
       `${this.apiUrl}/${encodeURIComponent(repairOrderID)}/status`,
       { status }
+    );
+  }
+
+  chooseOption(
+    repairOrderID: string,
+    option: 'repair' | 'resell' | 'reject'
+  ): Observable<{ message: string; status: string; userChoice?: RepairRequest['userChoice'] }> {
+    return this.http.post<{ message: string; status: string; userChoice?: RepairRequest['userChoice'] }>(
+      `${this.apiUrl}/${encodeURIComponent(repairOrderID)}/choice`,
+      { option }
     );
   }
 

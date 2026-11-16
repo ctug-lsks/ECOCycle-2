@@ -8,7 +8,7 @@ const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const createAuthRouter = require('./auth.routes');
 const { buildMarketPriceReferences, requestAssessment } = require('./ai-assessment.service');
-const { normalizeRepairOrderStatus } = require('./repair-status');
+const { normalizeRepairOrderStatus, normalizeRepairStatus } = require('./repair-status');
 
 const dns = require('dns');
 try {
@@ -22,7 +22,7 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:4200',
+    origin: '*',
     methods: ['GET', 'POST']
   }
 });
@@ -153,6 +153,200 @@ app.get('/api/admin/product-requests', authenticate, requireAdmin, async (_req, 
   } catch (err) {
     console.error('Lỗi khi tải danh sách yêu cầu sản phẩm admin:', err);
     res.status(500).json({ message: 'Không thể tải danh sách yêu cầu sản phẩm.' });
+  }
+});
+
+// Người dùng gửi yêu cầu đăng bán sản phẩm (Customer hoặc Seller)
+app.post('/api/product-requests', authenticate, async (req, res) => {
+  try {
+    const { title, cateID, condition, fromPrice, price, img, description } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: 'Vui lòng nhập tên sản phẩm.' });
+    }
+
+    const parseVal = v => {
+      if (typeof v === 'number') return v;
+      return parseFloat(String(v || '').replace(/[^0-9.]/g, '')) || 0;
+    };
+    const finalPrice = parseVal(price ?? fromPrice);
+    if (finalPrice <= 0) {
+      return res.status(400).json({ message: 'Giá sản phẩm không hợp lệ.' });
+    }
+
+    const user = await getCollection('users').findOne({ userID: req.auth.userID });
+    
+    // Quy định GreenCoin theo bản chất sản phẩm:
+    // Hàng mới 100% / Brandnew / Nguyên seal -> 0 Green Coin
+    // Đồ cũ / Đã qua sử dụng / Tái chế / Like new 99% -> 1.000 Green Coin khi Admin duyệt
+    const condNormalized = String(condition || '').toLowerCase().trim();
+    const isBrandNew = condNormalized === 'mới 100%' || 
+                       condNormalized === 'mới' || 
+                       condNormalized === 'nguyên seal' || 
+                       condNormalized === 'brand new' || 
+                       condNormalized.includes('mới 100%') ||
+                       condNormalized.includes('brandnew');
+    const greenCoins = isBrandNew ? 0 : 1000;
+
+    // Tự động kích hoạt vai trò SELLER khi người dùng đăng bán sản phẩm
+    let currentRole = user ? user.role : 'CUSTOMER';
+    if (user && user.role !== 'SELLER' && user.role !== 'ADMIN') {
+      await getCollection('users').updateOne(
+        { userID: user.userID },
+        { 
+          $set: { 
+            role: 'SELLER',
+            sellerDetails: user.sellerDetails || {
+              businessName: user.fullName || user.userName || 'Cá nhân',
+              shopName: user.fullName || user.userName || 'Cửa hàng của tôi',
+              address: (user.customerDetails && user.customerDetails.address) ? user.customerDetails.address : 'TP.HCM',
+              taxCode: '',
+              bankInfo: (user.customerDetails && user.customerDetails.bankInfo) ? user.customerDetails.bankInfo : { bankName: '', accountNumber: '', accountHolder: '' }
+            }
+          } 
+        }
+      );
+      currentRole = 'SELLER';
+    }
+
+    const newRequest = {
+      requestId: `PR${String(Date.now()).slice(-6)}`,
+      userId: req.auth.userID,
+      userRole: currentRole,
+      userName: user ? (user.fullName || user.userName) : 'Thành viên',
+      userPhone: user ? (user.phoneNumber || '') : '',
+      title: title.trim(),
+      cateID: cateID || 'c1',
+      condition: condition || 'Mới 95%',
+      price: finalPrice,
+      fromPrice: `${finalPrice.toLocaleString('vi-VN')}₫`,
+      img: img || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=150',
+      description: (description || '').trim(),
+      greenCoins: greenCoins,
+      status: 'Chờ duyệt',
+      createdAt: new Date().toISOString()
+    };
+
+    await getCollection('productRequests').insertOne(newRequest);
+    res.status(201).json({
+      success: true,
+      message: 'Đã gửi yêu cầu đăng bán thành công, đang chờ ban quản trị kiểm duyệt!',
+      request: newRequest,
+      role: currentRole
+    });
+  } catch (err) {
+    console.error('Lỗi khi gửi yêu cầu đăng bán:', err);
+    res.status(500).json({ message: 'Không thể gửi yêu cầu đăng bán.' });
+  }
+});
+
+// Lấy danh sách yêu cầu đăng bán của chính người dùng đang đăng nhập
+app.get('/api/product-requests', authenticate, async (req, res) => {
+  try {
+    const requests = await getCollection('productRequests')
+      .find({ $or: [{ userId: req.auth.userID }, { userID: req.auth.userID }] })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.status(200).json(requests);
+  } catch (err) {
+    console.error('Lỗi khi lấy yêu cầu đăng bán của người dùng:', err);
+    res.status(500).json({ message: 'Không thể tải yêu cầu đăng bán.' });
+  }
+});
+
+// API Quản lý sản phẩm dành cho Seller (Lấy toàn bộ sản phẩm của Seller: đang bán, chờ duyệt, hết hàng/đã bán)
+app.get('/api/seller/my-products', authenticate, async (req, res) => {
+  try {
+    const sellerId = req.auth.userID;
+    const [categories, requests] = await Promise.all([
+      getCollection('products').find({}).toArray(),
+      getCollection('productRequests').find({
+        $or: [{ userId: sellerId }, { userID: sellerId }]
+      }).sort({ createdAt: -1 }).toArray()
+    ]);
+
+    const activeProducts = [];
+    categories.forEach(cat => {
+      (cat.Products || []).forEach(p => {
+        if (String(p.sellerid || p.sellerId) === String(sellerId)) {
+          activeProducts.push({
+            id: p.id,
+            title: p.title,
+            img: p.img || (p.images && p.images[0]) || '',
+            categoryName: cat.CateName || 'Điện tử',
+            cateID: cat.CateID,
+            price: p.fromPrice || p.newPrice || (p.price ? `${Number(p.price).toLocaleString('vi-VN')}₫` : '0₫'),
+            priceNum: typeof p.Price === 'number' ? p.Price : parseInt(String(p.fromPrice || p.price || 0).replace(/[^0-9]/g, ''), 10) || 0,
+            quantity: p.quantity !== undefined ? Number(p.quantity) : 1,
+            condition: p.condition || 'Đã qua sử dụng',
+            status: p.Status || (p.quantity === 0 ? 'Hết hàng' : 'Còn hàng'),
+            type: 'ACTIVE_PRODUCT',
+            createdAt: p.createdAt || '2026-01-01'
+          });
+        }
+      });
+    });
+
+    const pendingRequests = requests.map(r => ({
+      id: r.requestId || r.requestID,
+      title: r.title || r.productName,
+      img: r.img,
+      categoryName: r.cateID === 'c1' ? 'Điện thoại' : r.cateID === 'c2' ? 'Laptop' : r.cateID === 'c3' ? 'Máy tính bảng' : 'Phụ kiện',
+      cateID: r.cateID,
+      price: typeof r.price === 'number' ? `${r.price.toLocaleString('vi-VN')}₫` : (r.fromPrice || '0₫'),
+      priceNum: typeof r.price === 'number' ? r.price : parseInt(String(r.price || 0).replace(/[^0-9]/g, ''), 10) || 0,
+      quantity: 1,
+      condition: r.condition || 'Mới 95%',
+      status: r.status || 'Chờ duyệt',
+      type: 'REQUEST',
+      createdAt: r.createdAt
+    }));
+
+    const allSellerItems = [...activeProducts, ...pendingRequests];
+    res.status(200).json({
+      success: true,
+      totalCount: allSellerItems.length,
+      activeCount: activeProducts.filter(p => p.status === 'Còn hàng').length,
+      pendingCount: pendingRequests.filter(r => r.status === 'Chờ duyệt').length,
+      soldCount: activeProducts.filter(p => p.status === 'Đã bán' || p.status === 'Hết hàng').length,
+      products: allSellerItems
+    });
+  } catch (err) {
+    console.error('Lỗi khi lấy danh sách sản phẩm của Seller:', err);
+    res.status(500).json({ message: 'Không thể tải danh sách sản phẩm.' });
+  }
+});
+
+// Xóa hoặc gỡ sản phẩm khỏi gian hàng của Seller
+app.delete('/api/seller/products/:productId', authenticate, async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const sellerId = req.auth.userID;
+
+    // Kiểm tra xem là sản phẩm đang bán hay là yêu cầu chờ duyệt
+    const productsCollection = getCollection('products');
+    const updateResult = await productsCollection.updateOne(
+      { "Products.id": productId, "Products.sellerid": sellerId },
+      { $pull: { Products: { id: productId } } }
+    );
+
+    if (updateResult.modifiedCount > 0) {
+      return res.status(200).json({ success: true, message: 'Đã xóa sản phẩm khỏi gian hàng thành công.' });
+    }
+
+    // Nếu không có trong products, kiểm tra trong productRequests
+    const reqResult = await getCollection('productRequests').deleteOne({
+      $or: [{ requestId: productId }, { _id: productId }],
+      $or: [{ userId: sellerId }, { userID: sellerId }]
+    });
+
+    if (reqResult.deletedCount > 0) {
+      return res.status(200).json({ success: true, message: 'Đã hủy yêu cầu đăng bán thành công.' });
+    }
+
+    res.status(404).json({ message: 'Không tìm thấy sản phẩm hoặc bạn không có quyền xóa sản phẩm này.' });
+  } catch (err) {
+    console.error('Lỗi khi xóa sản phẩm của Seller:', err);
+    res.status(500).json({ message: 'Không thể xóa sản phẩm.' });
   }
 });
 
@@ -348,7 +542,7 @@ app.patch('/api/admin/product-requests/:requestId/status', authenticate, require
         if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
         return Number(String(value || '').replace(/[^\d]/g, '')) || 0;
       };
-      const price = parsePrice(request.price);
+      const price = parsePrice(request.price ?? request.fromPrice);
       const formattedPrice = price ? `${price.toLocaleString('vi-VN')}₫` : '';
       const product = {
         id: productID,
@@ -518,8 +712,8 @@ app.patch('/api/admin/users/:userID/green-coins', authenticate, requireAdmin, as
       { projection: { role: 1 } }
     );
     if (!targetUser) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
-    if (targetUser.role !== 'CUSTOMER') {
-      return res.status(400).json({ message: 'Chỉ tài khoản CUSTOMER mới được thêm GreenCoin.' });
+    if (targetUser.role !== 'CUSTOMER' && targetUser.role !== 'SELLER') {
+      return res.status(400).json({ message: 'Chỉ tài khoản CUSTOMER hoặc SELLER mới được thêm GreenCoin.' });
     }
     const result = await users.findOneAndUpdate(
       { userID: req.params.userID },
@@ -945,14 +1139,27 @@ function registerRepairRoutes() {
         { repairOrderID: req.params.repairOrderID }
       );
       if (!repairOrder) return res.status(404).json({ message: 'Không tìm thấy yêu cầu sửa chữa.' });
+      const currentStatus = normalizeRepairStatus(repairOrder.status);
+      let requestedStatus = normalizeRepairStatus(status);
+      if (currentStatus === requestedStatus) {
+        return res.json({
+          message: 'Trạng thái đã được cập nhật trước đó.',
+          status: currentStatus
+        });
+      }
+      if (currentStatus === 'Chờ xác nhận' && requestedStatus === 'Đang sửa chữa') {
+        requestedStatus = 'Chờ lựa chọn của người dùng';
+      }
       const allowedTransitions = {
-        'Chờ xác nhận': ['Đang sửa chữa', 'Đã hủy'],
-        'Đang sửa chữa': ['Đã hoàn thành'],
+        'Chờ xác nhận': ['Chờ lựa chọn của người dùng', 'Đang sửa chữa', 'Đã hủy'],
+        'Chờ lựa chọn của người dùng': ['Chờ admin cập nhật trạng thái', 'Đã chọn bán lại', 'Đang sửa chữa', 'Đã hủy'],
+        'Chờ admin cập nhật trạng thái': ['Đang sửa chữa', 'Đã hủy'],
+        'Đang sửa chữa': ['Đã hoàn thành', 'Đã hủy'],
         'Đã hoàn thành': ['Đã giao hàng']
       };
-      if (allowedTransitions[repairOrder.status] &&
-          !allowedTransitions[repairOrder.status].includes(status)) {
-        return res.status(409).json({ message: `Không thể chuyển từ ${repairOrder.status} sang ${status}.` });
+      if (allowedTransitions[currentStatus] &&
+          !allowedTransitions[currentStatus].includes(requestedStatus)) {
+        return res.status(409).json({ message: `Không thể chuyển từ ${currentStatus} sang ${requestedStatus}.` });
       }
       if (repairOrder.userChoice?.option === 'resell') {
         return res.status(409).json({ message: 'Yêu cầu này đã được chuyển sang đăng bán, không thể đổi trạng thái sửa chữa.' });
@@ -962,7 +1169,7 @@ function registerRepairRoutes() {
           repairOrderID: req.params.repairOrderID,
           'userChoice.option': { $ne: 'resell' }
         },
-        { $set: { status, statusUpdatedAt, updatedAt: statusUpdatedAt } }
+        { $set: { status: requestedStatus, statusUpdatedAt, updatedAt: statusUpdatedAt } }
       );
       if (!result.matchedCount) return res.status(404).json({ message: 'Không tìm thấy yêu cầu sửa chữa.' });
       const updatedOrder = await getCollection('repairOrders').findOne(
@@ -971,11 +1178,15 @@ function registerRepairRoutes() {
       );
       await createRepairNotification(
         updatedOrder?.customerID,
-        'Cập nhật trạng thái sửa chữa',
-        `Yêu cầu ${req.params.repairOrderID} đã chuyển sang trạng thái: ${status}.`,
+        requestedStatus === 'Chờ lựa chọn của người dùng'
+          ? 'Chuyên gia đã xác nhận thông tin'
+          : 'Cập nhật trạng thái sửa chữa',
+        requestedStatus === 'Chờ lựa chọn của người dùng'
+          ? `Chuyên gia đã xác nhận thông tin cho yêu cầu ${req.params.repairOrderID}. Vui lòng chọn Sửa chữa, Bán lại hoặc Từ chối.`
+          : `Yêu cầu ${req.params.repairOrderID} đã chuyển sang trạng thái: ${requestedStatus}.`,
         req.params.repairOrderID
       );
-      res.json({ message: 'Đã cập nhật trạng thái.', status });
+      res.json({ message: 'Đã cập nhật trạng thái.', status: requestedStatus });
     } catch (error) {
       console.error('Lỗi cập nhật trạng thái repair:', error);
       res.status(500).json({ message: 'Không thể cập nhật trạng thái.' });
@@ -985,7 +1196,11 @@ function registerRepairRoutes() {
   app.post('/api/repair-requests/:repairOrderID/choice', authenticate, async (req, res) => {
     const repairOrderID = String(req.params.repairOrderID || '').trim();
     const option = req.body?.option;
-    const options = { repair: { status: 'Chờ admin cập nhật trạng thái' } };
+    const options = {
+      repair: { status: 'Chờ admin cập nhật trạng thái', label: 'sửa chữa' },
+      resell: { status: 'Đã chọn bán lại', label: 'bán lại' },
+      reject: { status: 'Đã hủy', label: 'từ chối / hủy yêu cầu' }
+    };
     if (!Object.prototype.hasOwnProperty.call(options, option)) {
       return res.status(400).json({ message: 'Phương án lựa chọn không hợp lệ.' });
     }
@@ -1014,20 +1229,20 @@ function registerRepairRoutes() {
       const notificationFailed = await sendRepairNotifications([
         createRepairNotification(
         order.customerID,
-        'Đã ghi nhận lựa chọn sửa chữa',
-        `Bạn đã chọn sửa chữa cho yêu cầu ${repairOrderID}. Trạng thái hiện tại là "Chờ admin cập nhật trạng thái".`,
+        `Đã ghi nhận lựa chọn ${options[option].label}`,
+        `Bạn đã chọn ${options[option].label} cho yêu cầu ${repairOrderID}. Trạng thái hiện tại là "${options[option].status}".`,
         repairOrderID
         ),
         notifyRepairManagers(
-        'Người dùng đã chọn sửa chữa',
-        `Yêu cầu ${repairOrderID} đã được chọn sửa chữa và đang chờ admin cập nhật trạng thái.`,
+        `Người dùng đã chọn ${options[option].label}`,
+        `Yêu cầu ${repairOrderID} đã được chọn ${options[option].label}. Trạng thái hiện tại là "${options[option].status}".`,
         repairOrderID
         )
-      ], `Lỗi thông báo lựa chọn sửa chữa ${repairOrderID}`);
+      ], `Lỗi thông báo lựa chọn ${options[option].label} ${repairOrderID}`);
       return res.json({
         message: notificationFailed
-          ? 'Đã lưu lựa chọn sửa chữa nhưng có lỗi khi gửi thông báo.'
-          : 'Đã lưu lựa chọn sửa chữa.',
+          ? `Đã lưu lựa chọn ${options[option].label} nhưng có lỗi khi gửi thông báo.`
+          : `Đã lưu lựa chọn ${options[option].label}.`,
         status: options[option].status,
         userChoice
       });
@@ -1133,6 +1348,31 @@ function registerRepairRoutes() {
           return res.status(409).json({ message: 'Yêu cầu đã được cập nhật. Vui lòng tải lại và thử lại.' });
         }
         listingCommitted = true;
+
+        // Tự động nâng cấp tài khoản sang vai trò SELLER khi chọn đăng bán lại thiết bị sau kiểm tra AI
+        try {
+          const usersCollection = await getCollection('users');
+          const currentUserDoc = await usersCollection.findOne({ userID: req.auth.userID });
+          if (currentUserDoc && currentUserDoc.role !== 'SELLER' && currentUserDoc.role !== 'ADMIN') {
+            await usersCollection.updateOne(
+              { userID: req.auth.userID },
+              {
+                $set: {
+                  role: 'SELLER',
+                  sellerDetails: currentUserDoc.sellerDetails || {
+                    businessName: currentUserDoc.fullName || currentUserDoc.userName || 'Cá nhân',
+                    shopName: currentUserDoc.fullName || currentUserDoc.userName || 'Cửa hàng của tôi',
+                    address: currentUserDoc.customerDetails?.address || 'TP.HCM',
+                    taxCode: '',
+                    bankInfo: currentUserDoc.customerDetails?.bankInfo || { bankName: '', accountNumber: '', accountHolder: '' }
+                  }
+                }
+              }
+            );
+          }
+        } catch (upgradeErr) {
+          console.error('Lỗi tự động nâng cấp SELLER khi đăng bán lại:', upgradeErr);
+        }
       } catch (error) {
         await getCollection('products').updateOne(
           { CateID: categoryID },
@@ -1249,6 +1489,81 @@ async function restoreProductQuantity(items) {
     }
   } catch (err) {
     console.error("Lỗi khi hoàn trả số lượng sản phẩm trong MongoDB products:", err);
+  }
+}
+
+async function syncInvoice(order, paymentStatus = 'Chưa thanh toán') {
+  try {
+    const invoicesCollection = await getCollection('invoices');
+    const orderId = order.orderID || order.orderId;
+    if (!orderId) return;
+
+    const existing = await invoicesCollection.findOne({
+      $or: [{ orderId: orderId }, { orderID: orderId }]
+    });
+
+    if (existing) {
+      await invoicesCollection.updateOne(
+        { _id: existing._id },
+        { $set: { paymentStatus: paymentStatus, updatedAt: new Date().toISOString() } }
+      );
+      return;
+    }
+
+    let totalNum = typeof order.totalPrice === 'number' ? order.totalPrice : 0;
+    if (typeof order.totalPrice === 'string') {
+      totalNum = parseInt(order.totalPrice.replace(/\D/g, ''), 10) || 0;
+    }
+
+    let subtotalNum = typeof order.subtotal === 'number' ? order.subtotal : 0;
+    if (typeof order.subtotal === 'string') {
+      subtotalNum = parseInt(order.subtotal.replace(/\D/g, ''), 10) || 0;
+    }
+
+    let shippingFeeNum = typeof order.shippingFee === 'number' ? order.shippingFee : 0;
+    if (typeof order.shippingFee === 'string') {
+      shippingFeeNum = parseInt(order.shippingFee.replace(/\D/g, ''), 10) || 20000;
+    }
+
+    const count = await invoicesCollection.countDocuments();
+    const invoiceNumber = order.invoiceNumber || `HD2026${String(count + 1).padStart(4, '0')}`;
+
+    const newInvoice = {
+      invoiceNumber: invoiceNumber,
+      orderId: orderId,
+      orderType: order.orderType || 'brandnew',
+      customerId: order.customerID || order.customerId || '',
+      sellerId: order.sellerID || order.sellerId || 'SL000000',
+      subtotal: subtotalNum,
+      shippingFee: shippingFeeNum,
+      totalPrice: totalNum,
+      paymentMethod: order.paymentMethod || (order.shippingInfo && order.shippingInfo.paymentMethod) || 'Thanh toán khi nhận hàng',
+      paymentStatus: paymentStatus,
+      issuedDate: new Date().toISOString()
+    };
+
+    await invoicesCollection.insertOne(newInvoice);
+  } catch (err) {
+    console.error('Lỗi syncInvoice:', err);
+  }
+}
+
+async function updateInvoiceStatus(orderId, paymentStatus, order = null) {
+  try {
+    const invoicesCollection = await getCollection('invoices');
+    const existing = await invoicesCollection.findOne({
+      $or: [{ orderId: orderId }, { orderID: orderId }]
+    });
+    if (existing) {
+      await invoicesCollection.updateOne(
+        { _id: existing._id },
+        { $set: { paymentStatus: paymentStatus, updatedAt: new Date().toISOString() } }
+      );
+    } else if (order) {
+      await syncInvoice(order, paymentStatus);
+    }
+  } catch (err) {
+    console.error('Lỗi updateInvoiceStatus:', err);
   }
 }
 
@@ -1553,6 +1868,7 @@ app.post('/orders', authenticate, async (req, res) => {
 
       await sellOrdersCollection.insertOne(newSellOrder);
       createdOrders.push(newSellOrder);
+      await syncInvoice(newSellOrder, 'Chưa thanh toán');
     }
 
     await deductProductQuantity(orderData.items);
@@ -1596,6 +1912,7 @@ app.put('/orders/cancel/:orderId', authenticate, async (req, res) => {
     if (prods.length > 0) {
       await restoreProductQuantity(prods);
     }
+    await updateInvoiceStatus(targetOrderId, 'Đã hủy');
 
     res.status(200).json({ success: true, message: "Đã hủy đơn hàng thành công và cộng lại số lượng sản phẩm vào kho" });
   } catch (err) {
@@ -1640,9 +1957,18 @@ app.put('/orders/status/:orderId', authenticate, requireAdmin, async (req, res) 
       { $set: { status: status, updatedAt: new Date().toISOString() } }
     );
 
+    const cancelledStatuses = ['Đã hủy', 'Đã huỷ'];
+    if (cancelledStatuses.includes(status) && !cancelledStatuses.includes(previousStatus)) {
+      const prods = order.products || order.items || [];
+      if (prods.length > 0) {
+        await restoreProductQuantity(prods);
+      }
+      await updateInvoiceStatus(order.orderID || order.orderId || orderId, 'Đã hủy');
+    }
+
     const deliveredStatuses = ['Đã giao', 'Đã giao hàng', 'Hoàn thành'];
     if (deliveredStatuses.includes(status) && !deliveredStatuses.includes(previousStatus)) {
-      const cId = order.customerID;
+      const cId = order.customerID || order.customerId;
       if (!cId) {
         return res.status(500).json({ message: 'Đơn hàng không có tài khoản sở hữu.' });
       }
@@ -1650,13 +1976,14 @@ app.put('/orders/status/:orderId', authenticate, requireAdmin, async (req, res) 
         { userID: cId },
         { $inc: { greenCoins: 10000 } }
       );
+      await updateInvoiceStatus(order.orderID || order.orderId || orderId, 'Đã thanh toán', order);
     }
 
     res.status(200).json({ success: true, message: `Đã chuyển trạng thái đơn hàng sang ${status}` });
     // Chỉ bổ sung thông báo sau khi trả kết quả; KHÔNG sửa logic đơn hàng gốc.
-    if (deliveredStatuses.includes(status) && !deliveredStatuses.includes(previousStatus) && order.customerID) {
+    if (deliveredStatuses.includes(status) && !deliveredStatuses.includes(previousStatus) && (order.customerID || order.customerId)) {
       void createRepairNotification(
-        order.customerID,
+        order.customerID || order.customerId,
         'Bạn đã nhận 10.000 GreenCoins',
         `Đơn hàng ${order.orderID || order.orderId || orderId} đã hoàn tất. Bạn được cộng 10.000 GreenCoins.`,
         order.orderID || order.orderId || orderId,
@@ -1665,6 +1992,26 @@ app.put('/orders/status/:orderId', authenticate, requireAdmin, async (req, res) 
     }
   } catch (err) {
     console.error("Lỗi khi cập nhật trạng thái đơn hàng:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/invoices', authenticate, async (req, res) => {
+  try {
+    const invoicesCollection = await getCollection('invoices');
+    const authUser = req.auth || {};
+    let query = {};
+    if (authUser.role === 'ADMIN') {
+      query = {};
+    } else if (authUser.role === 'SELLER') {
+      query = { $or: [{ sellerId: authUser.userID }, { customerId: authUser.userID }] };
+    } else {
+      query = { customerId: authUser.userID };
+    }
+    const invoices = await invoicesCollection.find(query).sort({ issuedDate: -1 }).toArray();
+    res.json(invoices);
+  } catch (err) {
+    console.error('Lỗi tải danh sách hóa đơn:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1683,7 +2030,9 @@ app.get('/orders/detail/:id', authenticate, async (req, res) => {
     }
     if (
       ord.customerID !== req.auth.userID &&
+      ord.customerId !== req.auth.userID &&
       ord.sellerID !== req.auth.userID &&
+      ord.sellerId !== req.auth.userID &&
       !['ADMIN', 'TECHNICIAN'].includes(req.auth.role)
     ) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -1752,7 +2101,9 @@ app.get('/orders', authenticate, async (req, res) => {
   try {
     const customerID = req.auth.userID;
     const sellOrdersCollection = await getCollection('sellOrders');
-    const ordersList = await sellOrdersCollection.find({ customerID: customerID }).sort({ createdAt: -1, _id: -1 }).toArray();
+    const ordersList = await sellOrdersCollection.find({
+      $or: [{ customerID: customerID }, { customerId: customerID }]
+    }).sort({ createdAt: -1, _id: -1 }).toArray();
 
     // Chỉ bổ sung nếu có đơn cũ bị thiếu sellerInfo hoặc thiếu chi tiết sản phẩm
     const missingSellerIds = new Set();
@@ -1822,8 +2173,15 @@ app.get('/orders', authenticate, async (req, res) => {
 
       return {
         ...ord,
+        orderID: ord.orderID || ord.orderId,
+        orderId: ord.orderId || ord.orderID,
+        customerID: ord.customerID || ord.customerId,
+        customerId: ord.customerId || ord.customerID,
+        sellerID: ord.sellerID || ord.sellerId,
+        sellerId: ord.sellerId || ord.sellerID,
         sellerInfo: sellerInfo,
         products: enrichedProducts,
+        items: enrichedProducts,
         earnedCoins: ord.earnedCoins || 10000
       };
     });

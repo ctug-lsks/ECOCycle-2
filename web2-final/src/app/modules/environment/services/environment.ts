@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 // Cấu trúc dữ liệu thống kê môi trường
 export interface EnvironmentStats {
@@ -19,7 +20,7 @@ export interface EnvironmentStats {
 })
 export class EnvironmentService {
 
-  private readonly apiUrl = 'http://localhost:3000/api/environment';
+  private readonly apiUrl = `${environment.apiUrl}/api/environment`;
 
   constructor(private http: HttpClient) {}
 

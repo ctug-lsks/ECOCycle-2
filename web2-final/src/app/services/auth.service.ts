@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { User, UserRole } from '../classes/user';
 import type { ProfileUpdateRequest, RegisterRequest } from '../classes/admin';
+import { environment } from '../../environments/environment';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json'
@@ -19,7 +20,7 @@ interface AuthResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly apiUrl = 'http://localhost:3000/api/auth';
+  private readonly apiUrl = `${environment.apiUrl}/api/auth`;
 
   private readonly userSubject =
     new BehaviorSubject<User | null>(this.readSavedUser());

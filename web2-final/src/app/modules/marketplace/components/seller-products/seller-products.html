@@ -1,0 +1,244 @@
+<div class="seller-products-page">
+  <div class="page-container">
+
+    <!-- HEADER TRANG -->
+    <header class="page-header">
+      <div class="header-left">
+        <div class="header-badge">
+          <i class="bi bi-shop"></i> Kênh Người Bán ECO
+        </div>
+        <h1>Quản lý sản phẩm gian hàng</h1>
+        <p class="subtitle">Theo dõi, kiểm tra trạng thái duyệt và quản lý danh mục thiết bị bạn đã đăng bán.</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn-post-new" (click)="navigatePostProduct()">
+          <i class="bi bi-plus-lg"></i> Đăng bán thiết bị mới
+        </button>
+      </div>
+    </header>
+
+    <!-- THẺ THỐNG KÊ NHANH -->
+    <section class="metrics-grid">
+      <div class="metric-card card-total">
+        <div class="metric-icon">
+          <i class="bi bi-box-seam"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Tổng sản phẩm</span>
+          <strong class="metric-value">{{ totalCount }}</strong>
+          <span class="metric-desc">Tất cả bài đăng</span>
+        </div>
+      </div>
+
+      <div class="metric-card card-active">
+        <div class="metric-icon">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Đang hiển thị bán</span>
+          <strong class="metric-value">{{ activeCount }}</strong>
+          <span class="metric-desc">Khách hàng có thể mua</span>
+        </div>
+      </div>
+
+      <div class="metric-card card-pending">
+        <div class="metric-icon">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Đang chờ duyệt</span>
+          <strong class="metric-value">{{ pendingCount }}</strong>
+          <span class="metric-desc">Admin đang kiểm tra</span>
+        </div>
+      </div>
+
+      <div class="metric-card card-sold">
+        <div class="metric-icon">
+          <i class="bi bi-bag-check"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Đã bán / Hết hàng</span>
+          <strong class="metric-value">{{ soldCount }}</strong>
+          <span class="metric-desc">Sản phẩm hoàn tất</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- THANH TÌM KIẾM & BỘ LỌC -->
+    <section class="filters-card">
+      <div class="filters-top">
+        <div class="search-input-wrapper">
+          <i class="bi bi-search"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            (ngModelChange)="onSearchChange()" 
+            placeholder="Tìm theo tên sản phẩm hoặc mã thiết bị..."
+          />
+          @if (searchTerm) {
+            <button type="button" class="btn-clear-search" (click)="searchTerm = ''; onSearchChange()">
+              <i class="bi bi-x-circle-fill"></i>
+            </button>
+          }
+        </div>
+
+        <div class="category-select-wrapper">
+          <i class="bi bi-funnel"></i>
+          <select [ngModel]="selectedCategory" (ngModelChange)="onCategoryChange($event)">
+            @for (cat of categories; track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- TABS TRẠNG THÁI -->
+      <div class="status-tabs-nav">
+        @for (st of statuses; track st.id) {
+          <button 
+            type="button" 
+            class="status-tab-btn" 
+            [class.active]="selectedStatus === st.id"
+            (click)="onStatusChange(st.id)"
+          >
+            {{ st.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- DANH SÁCH SẢN PHẨM -->
+    <section class="products-table-section">
+      @if (isLoading) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Đang tải danh sách sản phẩm gian hàng...</p>
+        </div>
+      } @else if (errorMessage) {
+        <div class="error-state">
+          <i class="bi bi-exclamation-triangle"></i>
+          <p>{{ errorMessage }}</p>
+          <button type="button" class="btn-retry" (click)="fetchSellerProducts()">
+            <i class="bi bi-arrow-clockwise"></i> Thử lại
+          </button>
+        </div>
+      } @else if (filteredProducts.length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i class="bi bi-inbox"></i>
+          </div>
+          <h3>Không tìm thấy sản phẩm nào</h3>
+          <p>Chưa có sản phẩm phù hợp với bộ lọc hoặc từ khóa tìm kiếm của bạn.</p>
+          @if (searchTerm || selectedCategory !== 'ALL' || selectedStatus !== 'ALL') {
+            <button type="button" class="btn-reset-filters" (click)="searchTerm = ''; selectedCategory = 'ALL'; selectedStatus = 'ALL'; applyFilter()">
+              Xóa bộ lọc
+            </button>
+          } @else {
+            <button type="button" class="btn-post-first" (click)="navigatePostProduct()">
+              <i class="bi bi-plus-lg"></i> Đăng sản phẩm đầu tiên
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="seller-table">
+            <thead>
+              <tr>
+                <th class="col-product">Sản phẩm</th>
+                <th class="col-category">Danh mục</th>
+                <th class="col-price">Giá niêm yết</th>
+                <th class="col-stock">Kho</th>
+                <th class="col-status">Trạng thái</th>
+                <th class="col-date">Ngày đăng</th>
+                <th class="col-actions">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of filteredProducts; track item.id) {
+                <tr class="product-row">
+                  <td class="col-product">
+                    <div class="product-cell">
+                      <img [src]="item.img || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=150'" [alt]="item.title" class="product-thumb" />
+                      <div class="product-meta">
+                        <span class="product-title" [title]="item.title">{{ item.title }}</span>
+                        <div class="product-sub-meta">
+                          <span class="product-code">Mã: {{ item.id }}</span>
+                          <span class="product-cond">{{ item.condition }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="col-category">
+                    <span class="category-pill">{{ item.categoryName }}</span>
+                  </td>
+
+                  <td class="col-price">
+                    <strong class="price-val">{{ item.price }}</strong>
+                  </td>
+
+                  <td class="col-stock">
+                    <span class="stock-qty" [class.out-of-stock]="item.quantity === 0">{{ item.quantity }}</span>
+                  </td>
+
+                  <td class="col-status">
+                    <span class="badge" [ngClass]="getStatusBadgeClass(item.status)">
+                      <i class="bi bi-dot"></i> {{ item.status }}
+                    </span>
+                  </td>
+
+                  <td class="col-date">
+                    <span class="date-val">{{ item.createdAt | date:'dd/MM/yyyy' }}</span>
+                  </td>
+
+                  <td class="col-actions">
+                    <div class="action-buttons">
+                      @if (item.type === 'ACTIVE_PRODUCT') {
+                        <a [routerLink]="['/san-pham', item.id]" target="_blank" class="btn-action view" title="Xem trên sàn">
+                          <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                      }
+                      <button type="button" class="btn-action delete" (click)="openDeleteModal(item)" title="Gỡ / Hủy sản phẩm">
+                        <i class="bi bi-trash3"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+  </div>
+
+  <!-- MODAL XÁC NHẬN XÓA / GỠ SẢN PHẨM -->
+  @if (selectedProductToDelete) {
+    <div class="modal-overlay" (click)="closeDeleteModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-icon-header">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h3>Xác nhận gỡ sản phẩm?</h3>
+        <p class="modal-desc">
+          Bạn có chắc chắn muốn gỡ <strong>{{ selectedProductToDelete.title }}</strong> (Mã: {{ selectedProductToDelete.id }})?
+          Hành động này sẽ xóa sản phẩm khỏi gian hàng hoặc hủy yêu cầu duyệt.
+        </p>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" (click)="closeDeleteModal()" [disabled]="isDeleting">
+            Hủy bỏ
+          </button>
+          <button type="button" class="btn-modal-confirm" (click)="confirmDelete()" [disabled]="isDeleting">
+            @if (isDeleting) {
+              <i class="bi bi-arrow-repeat spin"></i> Đang gỡ...
+            } @else {
+              <i class="bi bi-trash3-fill"></i> Gỡ sản phẩm
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

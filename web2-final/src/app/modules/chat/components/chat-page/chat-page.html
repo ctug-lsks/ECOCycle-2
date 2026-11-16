@@ -46,30 +46,32 @@
           />
         </div>
 
-        <button
-          type="button"
-          class="chat-support-pinned"
-          [class.active]="selectedConversation?.type === 'support'"
-          [disabled]="openingSupport"
-          (click)="openSupportChat()"
-        >
-          <span class="support-avatar">
-            <img
-              src="https://cdn-icons-png.flaticon.com/128/12441/12441159.png"
-              alt="Hỗ trợ EcoCycle"
-              class="support-avatar-icon"
-            />
-          </span>
+        @if (authService.currentUser?.role !== 'ADMIN') {
+          <button
+            type="button"
+            class="chat-support-pinned"
+            [class.active]="selectedConversation?.type === 'support'"
+            [disabled]="openingSupport"
+            (click)="openSupportChat()"
+          >
+            <span class="support-avatar">
+              <img
+                src="https://cdn-icons-png.flaticon.com/128/12441/12441159.png"
+                alt="Hỗ trợ EcoCycle"
+                class="support-avatar-icon"
+              />
+            </span>
 
-          <span class="support-info">
-            <strong>Hỗ trợ EcoCycle</strong>
-            <small>
-              {{ openingSupport ? 'Đang kết nối...' : 'Nhấn để liên hệ hỗ trợ' }}
-            </small>
-          </span>
+            <span class="support-info">
+              <strong>Hỗ trợ EcoCycle</strong>
+              <small>
+                {{ openingSupport ? 'Đang kết nối...' : 'Nhấn để liên hệ hỗ trợ' }}
+              </small>
+            </span>
 
-          <span class="support-pin">📌</span>
-        </button>
+            <span class="support-pin">📌</span>
+          </button>
+        }
 
         @if (loading && conversations.length === 0) {
           <p class="chat-empty">Đang tải...</p>
@@ -80,17 +82,28 @@
             type="button"
             class="conversation-item"
             [class.active]="selectedConversation?._id === conversation._id"
+            [class.support-item]="conversation.type === 'support'"
             (click)="selectConversation(conversation)"
           >
-            <img
-              [src]="getOtherUserAvatar(conversation)"
-              [alt]="getOtherUserName(conversation)"
-              class="conversation-avatar-img"
-            />
+            <div class="conversation-avatar-wrapper">
+              <img
+                [src]="getOtherUserAvatar(conversation)"
+                [alt]="getOtherUserName(conversation)"
+                class="conversation-avatar-img"
+              />
+              @if (conversation.type === 'support' && authService.currentUser?.role === 'ADMIN') {
+                <span class="support-badge-icon" title="Khách cần hỗ trợ">🎧</span>
+              }
+            </div>
 
             <div class="conversation-info">
-              <strong>{{ getOtherUserName(conversation) }}</strong>
-              <span>{{ conversation.lastMessage || 'Bắt đầu trò chuyện' }}</span>
+              <div class="conversation-title-row">
+                <strong class="conversation-user-name">{{ getOtherUserName(conversation) }}</strong>
+                @if (conversation.type === 'support' && authService.currentUser?.role === 'ADMIN') {
+                  <span class="support-pill">Hỗ trợ</span>
+                }
+              </div>
+              <span class="conversation-last-msg">{{ conversation.lastMessage || 'Bắt đầu trò chuyện' }}</span>
             </div>
           </button>
         } @empty {
@@ -108,14 +121,19 @@
 
           <div class="chat-main-header">
             <img
-              [src]="selectedConversation.type === 'support'
+              [src]="(selectedConversation.type === 'support' && authService.currentUser?.role !== 'ADMIN')
                 ? 'https://cdn-icons-png.flaticon.com/128/12441/12441159.png'
                 : getOtherUserAvatar(selectedConversation)"
               [alt]="getOtherUserName(selectedConversation)"
               class="chat-header-avatar"
             />
 
-            <strong>{{ getOtherUserName(selectedConversation) }}</strong>
+            <div class="chat-header-title-group">
+              <strong>{{ getOtherUserName(selectedConversation) }}</strong>
+              @if (selectedConversation.type === 'support' && authService.currentUser?.role === 'ADMIN') {
+                <span class="support-header-badge"><i class="bi bi-headset"></i> Khách hàng cần hỗ trợ</span>
+              }
+            </div>
           </div>
 
           <!-- NỘI DUNG TIN NHẮN -->
@@ -131,34 +149,36 @@
 
               @if (!isMyMessage(message) && message.type !== 'system') {
                 <img
-                  [src]="getOtherUserAvatar(selectedConversation)"
-                  [alt]="getOtherUserName(selectedConversation)"
+                  [src]="getMessageSenderAvatar(message)"
+                  [alt]="getMessageSenderName(message)"
                   class="chat-message-avatar"
                 />
               }
 
-                <div class="chat-bubble">
-                  @if (message.imageUrl) {
-                    @if (imageUrls[message._id]) {
-                      <img
-                        [src]="imageUrls[message._id]"
-                        alt="Hình ảnh trong cuộc trò chuyện"
-                        class="chat-image"
-                        (click)="openImagePreview(imageUrls[message._id])"
-                      />
-                    } @else {
-                      <span>Đang tải hình ảnh...</span>
+                <div class="chat-bubble-container">
+                  <div class="chat-bubble">
+                    @if (message.imageUrl) {
+                      @if (imageUrls[message._id]) {
+                        <img
+                          [src]="imageUrls[message._id]"
+                          alt="Hình ảnh trong cuộc trò chuyện"
+                          class="chat-image"
+                          (click)="openImagePreview(imageUrls[message._id])"
+                        />
+                      } @else {
+                        <span>Đang tải hình ảnh...</span>
+                      }
                     }
-                  }
 
-                  @if (message.content) {
-                    <span>{{ message.content }}</span>
-                  }
+                    @if (message.content) {
+                      <span>{{ message.content }}</span>
+                    }
+                  </div>
+
+                  <small class="chat-message-time">
+                    {{ message.createdAt | date:'HH:mm dd/MM/yyyy' }}
+                  </small>
                 </div>
-
-                <small>
-                  {{ message.createdAt | date:'HH:mm dd/MM/yyyy' }}
-                </small>
 
               </div>
 
@@ -170,7 +190,7 @@
 
             }
 
-            @if (selectedConversation?.type === 'support' && showSupportTopics) {
+            @if (selectedConversation?.type === 'support' && showSupportTopics && authService.currentUser?.role !== 'ADMIN') {
               <div class="chat-support-topics">
 
                 <p>Bạn cần hỗ trợ vấn đề gì?</p>
@@ -180,6 +200,7 @@
                     <button
                       type="button"
                       class="chat-topic-button"
+                      [class.topic-admin]="topic.id === 'admin'"
                       [disabled]="sendingSupportTopic"
                       (click)="selectSupportTopic(topic.id)"
                     >

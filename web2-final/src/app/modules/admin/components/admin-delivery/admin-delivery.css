@@ -1,14 +1,17 @@
 :host {
   display: block;
   min-height: 100%;
-  background: #f6f8f7;
+  background: transparent;
 }
 
 .admin-page {
-  width: min(1440px, 100%);
+  width: 100%;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 36px clamp(16px, 3vw, 40px) 64px;
+  padding: 32px 0 48px;
   color: #18251e;
+  box-sizing: border-box;
+  background: transparent;
 }
 
 .admin-heading,

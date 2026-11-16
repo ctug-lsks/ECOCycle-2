@@ -64,7 +64,7 @@
     } @else {
       
       <div class="flex flex-col gap-5">
-        @for (ord of filteredOrders; track ord.orderId) {
+        @for (ord of filteredOrders; track (ord.orderId || ord.orderID || ord._id)) {
           <div class="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
             
             <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
@@ -102,7 +102,7 @@
                 @if (ord.status === 'Chờ xác nhận' || ord.status === 'Đã đặt hàng') {
                   <button 
                     type="button"
-                    (click)="onCancelOrder(ord.orderId)"
+                    (click)="onCancelOrder(ord.orderId || ord.orderID)"
                     class="text-xs font-bold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 px-3.5 py-1 rounded-xl transition-all shadow-sm active:scale-95"
                   >
                     Hủy đơn
@@ -112,10 +112,10 @@
             </div>
 
             <div 
-              [routerLink]="['/chi-tiet-don-hang', ord.orderId]"
+              [routerLink]="['/chi-tiet-don-hang', (ord.orderId || ord.orderID)]"
               class="flex flex-col gap-3 cursor-pointer group"
             >
-              @for (item of ord.items; track item.productId) {
+              @for (item of (ord.items || ord.products || []); track (item.productId || item.productID || item.title)) {
                 <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/70 group-hover:bg-emerald-50/40 transition-all rounded-2xl border border-gray-100">
                   <img [src]="item.img || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=150'" [alt]="item.title" class="w-14 h-14 object-contain rounded-xl bg-white p-1 border border-gray-100" />
                   
@@ -128,7 +128,7 @@
                   </div>
 
                   <div class="text-xs font-extrabold text-gray-900 group-hover:text-emerald-700 transition-colors flex items-center gap-2">
-                    <span>{{ formatPrice(item.price * item.quantity) }}</span>
+                    <span>{{ formatPrice(calcItemTotal(item.price, item.quantity)) }}</span>
                     <i class="bi bi-chevron-right text-gray-400 group-hover:text-emerald-600"></i>
                   </div>
                 </div>
