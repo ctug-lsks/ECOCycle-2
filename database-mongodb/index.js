@@ -1567,6 +1567,48 @@ async function updateInvoiceStatus(orderId, paymentStatus, order = null) {
   }
 }
 
+function normalizeProvince2026(addr) {
+  if (!addr) return 'TP. Hồ Chí Minh';
+  const a = addr.toLowerCase();
+  
+  if (a.includes('hồ chí minh') || a.includes('hcm') || a.includes('bình dương') || a.includes('vũng tàu') || a.includes('bà rịa')) return 'TP. Hồ Chí Minh';
+  if (a.includes('hà nội') || a.includes('ha noi')) return 'TP. Hà Nội';
+  if (a.includes('đà nẵng') || a.includes('da nang') || a.includes('quảng nam') || a.includes('quang nam')) return 'TP. Đà Nẵng';
+  if (a.includes('hải phòng') || a.includes('hai phong') || a.includes('hải dương') || a.includes('hai duong')) return 'TP. Hải Phòng';
+  if (a.includes('cần thơ') || a.includes('can tho') || a.includes('hậu giang') || a.includes('sóc trăng')) return 'TP. Cần Thơ';
+  if (a.includes('huế') || a.includes('hue') || a.includes('thừa thiên')) return 'TP. Huế';
+  if (a.includes('đồng nai') || a.includes('dong nai') || a.includes('bình phước') || a.includes('binh phuoc')) return 'TP. Đồng Nai';
+  if (a.includes('lâm đồng') || a.includes('đắk nông') || a.includes('bình thuận')) return 'Lâm Đồng';
+  if (a.includes('tây ninh') || a.includes('long an')) return 'Tây Ninh';
+  if (a.includes('đồng tháp') || a.includes('tiền giang')) return 'Đồng Tháp';
+  if (a.includes('vĩnh long') || a.includes('bến tre') || a.includes('trà vinh')) return 'Vĩnh Long';
+  if (a.includes('an giang') || a.includes('kiên giang')) return 'An Giang';
+  if (a.includes('cà mau') || a.includes('bạc liêu')) return 'Cà Mau';
+  if (a.includes('khánh hòa') || a.includes('ninh thuận') || a.includes('nha trang')) return 'Khánh Hòa';
+  if (a.includes('gia lai') || a.includes('bình định') || a.includes('quy nhơn')) return 'Gia Lai';
+  if (a.includes('đắk lắk') || a.includes('dak lak') || a.includes('phú yên') || a.includes('buôn ma thuột')) return 'Đắk Lắk';
+  if (a.includes('quảng ngãi') || a.includes('kon tum')) return 'Quảng Ngãi';
+  if (a.includes('quảng trị') || a.includes('quảng bình')) return 'Quảng Trị';
+  if (a.includes('hưng yên') || a.includes('thái bình')) return 'Hưng Yên';
+  if (a.includes('ninh bình') || a.includes('nam định') || a.includes('hà nam')) return 'Ninh Bình';
+  if (a.includes('bắc ninh') || a.includes('bắc giang')) return 'Bắc Ninh';
+  if (a.includes('phú thọ') || a.includes('vĩnh phúc') || a.includes('hòa bình')) return 'Phú Thọ';
+  if (a.includes('thái nguyên') || a.includes('bắc kạn')) return 'Thái Nguyên';
+  if (a.includes('lào cai') || a.includes('yên bái')) return 'Lào Cai';
+  if (a.includes('tuyên quang') || a.includes('hà giang')) return 'Tuyên Quang';
+  if (a.includes('điện biên')) return 'Điện Biên';
+  if (a.includes('sơn la')) return 'Sơn La';
+  if (a.includes('lạng sơn')) return 'Lạng Sơn';
+  if (a.includes('hà tĩnh')) return 'Hà Tĩnh';
+  if (a.includes('nghệ an')) return 'Nghệ An';
+  if (a.includes('thanh hóa')) return 'Thanh Hóa';
+  if (a.includes('cao bằng')) return 'Cao Bằng';
+  if (a.includes('quảng ninh')) return 'Quảng Ninh';
+  if (a.includes('lai châu')) return 'Lai Châu';
+
+  return 'TP. Hồ Chí Minh';
+}
+
 app.get('/products', async (req, res) => {
   try {
     const collection = await getCollection('products');
@@ -1598,29 +1640,27 @@ app.get('/products', async (req, res) => {
         .filter(p => p.Status !== 'Đã bán' && (p.quantity === undefined || p.quantity > 0))
         .map(p => {
           const sellerUser = userMap[p.sellerid];
-          let loc = 'TP.HCM';
+          let loc = 'TP. Hồ Chí Minh';
           let sellerInfo = null;
           if (sellerUser) {
-            if (sellerUser.sellerDetails && sellerUser.sellerDetails.address) {
-              const addr = sellerUser.sellerDetails.address;
-              const parts = addr.split(',');
-              loc = parts[parts.length - 1].trim();
-            }
+            const addr = (sellerUser.sellerDetails && sellerUser.sellerDetails.address) ? sellerUser.sellerDetails.address : '';
+            loc = normalizeProvince2026(addr);
             sellerInfo = {
               id: sellerUser.userID,
               name: sellerUser.fullName,
               avatar: sellerUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-              address: (sellerUser.sellerDetails && sellerUser.sellerDetails.address) ? sellerUser.sellerDetails.address : 'TP.HCM',
+              address: addr || 'TP. Hồ Chí Minh',
               joinDate: sellerUser.joinDate || '2026-01-01',
               rating: 4.9,
               isVerified: true
             };
           } else {
+            loc = normalizeProvince2026('');
             sellerInfo = {
               id: p.sellerid || 'SELLER_ECO',
               name: `Người bán (${p.sellerid || 'ECO'})`,
               avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-              address: 'TP.HCM',
+              address: 'TP. Hồ Chí Minh',
               joinDate: '2026-01-01',
               rating: 4.9,
               isVerified: true
@@ -1657,16 +1697,19 @@ app.get('/products/detail/:id', async (req, res) => {
     }
 
     const product = JSON.parse(JSON.stringify(rawProduct));
+    product.sellerLocation = normalizeProvince2026('');
 
     if (product.sellerid) {
       const usersCollection = await getCollection('users');
       const sellerUser = await usersCollection.findOne({ userID: product.sellerid });
       if (sellerUser) {
+        const addr = (sellerUser.sellerDetails && sellerUser.sellerDetails.address) ? sellerUser.sellerDetails.address : '';
+        product.sellerLocation = normalizeProvince2026(addr);
         product.sellerInfo = {
           id: sellerUser.userID,
           name: sellerUser.fullName,
           avatar: sellerUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-          address: (sellerUser.sellerDetails && sellerUser.sellerDetails.address) ? sellerUser.sellerDetails.address : 'Khu Đô thị Đại học Quốc gia TP.HCM',
+          address: addr || 'TP. Hồ Chí Minh',
           joinDate: sellerUser.joinDate || '2026-01-01',
           rating: 4.9,
           isVerified: true

@@ -89,6 +89,48 @@ export class ProductList implements OnInit {
     });
   }
 
+  normalizeProvince(addrOrLoc: string): string {
+    if (!addrOrLoc) return 'TP. Hồ Chí Minh';
+    const a = addrOrLoc.toLowerCase().trim();
+
+    if (a.includes('hồ chí minh') || a.includes('hcm') || a.includes('bình dương') || a.includes('vũng tàu') || a.includes('bà rịa') || a.includes('sài gòn') || a.includes('sai gon')) return 'TP. Hồ Chí Minh';
+    if (a.includes('hà nội') || a.includes('ha noi') || a === 'hn') return 'TP. Hà Nội';
+    if (a.includes('đà nẵng') || a.includes('da nang') || a.includes('quảng nam') || a.includes('quang nam')) return 'TP. Đà Nẵng';
+    if (a.includes('hải phòng') || a.includes('hai phong') || a.includes('hải dương') || a.includes('hai duong')) return 'TP. Hải Phòng';
+    if (a.includes('cần thơ') || a.includes('can tho') || a.includes('hậu giang') || a.includes('sóc trăng')) return 'TP. Cần Thơ';
+    if (a.includes('huế') || a.includes('hue') || a.includes('thừa thiên')) return 'TP. Huế';
+    if (a.includes('đồng nai') || a.includes('dong nai') || a.includes('bình phước') || a.includes('binh phuoc')) return 'TP. Đồng Nai';
+    if (a.includes('lâm đồng') || a.includes('đắk nông') || a.includes('bình thuận')) return 'Lâm Đồng';
+    if (a.includes('tây ninh') || a.includes('long an')) return 'Tây Ninh';
+    if (a.includes('đồng tháp') || a.includes('tiền giang')) return 'Đồng Tháp';
+    if (a.includes('vĩnh long') || a.includes('bến tre') || a.includes('trà vinh')) return 'Vĩnh Long';
+    if (a.includes('an giang') || a.includes('kiên giang')) return 'An Giang';
+    if (a.includes('cà mau') || a.includes('bạc liêu')) return 'Cà Mau';
+    if (a.includes('khánh hòa') || a.includes('ninh thuận') || a.includes('nha trang')) return 'Khánh Hòa';
+    if (a.includes('gia lai') || a.includes('bình định') || a.includes('quy nhơn')) return 'Gia Lai';
+    if (a.includes('đắk lắk') || a.includes('dak lak') || a.includes('phú yên') || a.includes('buôn ma thuột')) return 'Đắk Lắk';
+    if (a.includes('quảng ngãi') || a.includes('kon tum')) return 'Quảng Ngãi';
+    if (a.includes('quảng trị') || a.includes('quảng bình')) return 'Quảng Trị';
+    if (a.includes('hưng yên') || a.includes('thái bình')) return 'Hưng Yên';
+    if (a.includes('ninh bình') || a.includes('nam định') || a.includes('hà nam')) return 'Ninh Bình';
+    if (a.includes('bắc ninh') || a.includes('bắc giang')) return 'Bắc Ninh';
+    if (a.includes('phú thọ') || a.includes('vĩnh phúc') || a.includes('hòa bình')) return 'Phú Thọ';
+    if (a.includes('thái nguyên') || a.includes('bắc kạn')) return 'Thái Nguyên';
+    if (a.includes('lào cai') || a.includes('yên bái')) return 'Lào Cai';
+    if (a.includes('tuyên quang') || a.includes('hà giang')) return 'Tuyên Quang';
+    if (a.includes('điện biên')) return 'Điện Biên';
+    if (a.includes('sơn la')) return 'Sơn La';
+    if (a.includes('lạng sơn')) return 'Lạng Sơn';
+    if (a.includes('hà tĩnh')) return 'Hà Tĩnh';
+    if (a.includes('nghệ an')) return 'Nghệ An';
+    if (a.includes('thanh hóa')) return 'Thanh Hóa';
+    if (a.includes('cao bằng')) return 'Cao Bằng';
+    if (a.includes('quảng ninh')) return 'Quảng Ninh';
+    if (a.includes('lai châu')) return 'Lai Châu';
+
+    return 'TP. Hồ Chí Minh';
+  }
+
   loadAllProducts(): void {
     this.isLoading = true;
     this.selectedCateId = '';
@@ -96,7 +138,14 @@ export class ProductList implements OnInit {
     this._productService.getProducts().subscribe({
       next: (data) => {
         console.log('[ProductList] Nhận dữ liệu thành công từ Server:', data);
-        this.categories = data || [];
+        const rawCategories = data || [];
+        this.categories = rawCategories.map((cat: any) => ({
+          ...cat,
+          Products: (cat.Products || []).map((p: any) => ({
+            ...p,
+            sellerLocation: this.normalizeProvince(p.sellerLocation || (p.sellerInfo && p.sellerInfo.address) || '')
+          }))
+        }));
         this.extractAllProducts();
         this.isLoading = false;
         this._cdr.detectChanges();
@@ -178,11 +227,14 @@ export class ProductList implements OnInit {
 
     if (this.selectedLocations.length > 0) {
       list = list.filter(p => {
-        const prodLoc = (p.sellerLocation || '').toLowerCase();
-        const prodDesc = (p.Description || '').toLowerCase();
+        const prodNormalized = p.sellerLocation || this.normalizeProvince(p.sellerInfo?.address || '');
         return this.selectedLocations.some(sl => {
-          const locLow = sl.toLowerCase();
-          return prodLoc.includes(locLow) || prodDesc.includes(locLow);
+          if (prodNormalized === sl) return true;
+          const cleanSl = sl.replace(/^tp\.\s*/i, '').toLowerCase();
+          const cleanLoc = (p.sellerLocation || '').toLowerCase();
+          const cleanAddr = (p.sellerInfo?.address || '').toLowerCase();
+          const cleanDesc = (p.Description || '').toLowerCase();
+          return cleanLoc.includes(cleanSl) || cleanAddr.includes(cleanSl) || cleanDesc.includes(cleanSl);
         });
       });
     }

@@ -134,7 +134,7 @@ export class CartService {
         maxStock: maxStock,
         quantity: qty,
         sellerid: product.sellerid || 'SELLER_ECO',
-        sellerLocation: product.sellerLocation || 'TP.HCM',
+        sellerLocation: product.sellerLocation || 'TP. Hồ Chí Minh',
         sellerInfo: product.sellerInfo || null
       });
     }

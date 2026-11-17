@@ -260,6 +260,11 @@
                   <span class="text-gray-400 text-[11px] truncate max-w-[100px]">{{ prod.condition || 'Đã sử dụng' }}</span>
                 </div>
 
+                <div class="mt-1 flex items-center gap-1 text-[11px] text-gray-500 truncate" [title]="prod.sellerLocation || 'TP. Hồ Chí Minh'">
+                  <i class="bi bi-geo-alt text-emerald-600 flex-shrink-0"></i>
+                  <span class="truncate">{{ prod.sellerLocation || 'TP. Hồ Chí Minh' }}</span>
+                </div>
+
               </div>
             }
 

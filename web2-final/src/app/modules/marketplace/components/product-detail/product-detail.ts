@@ -160,7 +160,7 @@ export class ProductDetail implements OnInit {
         quantity: 1,
         maxStock: this.product.quantity || 1,
         sellerid: this.product.sellerid || 'SELLER_ECO',
-        sellerLocation: this.product.sellerLocation || 'TP.HCM',
+        sellerLocation: this.product.sellerLocation || 'TP. Hồ Chí Minh',
         sellerInfo: this.sellerInfo || this.product.sellerInfo || null
       }];
       this.cartService.setSelectedCheckoutItems(singleCheckoutItem);
