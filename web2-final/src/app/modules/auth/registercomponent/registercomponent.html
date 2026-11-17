@@ -71,12 +71,19 @@
               name="userName"
               type="text"
               [(ngModel)]="userName"
+              (ngModelChange)="onUserNameChange()"
               required
               minlength="3"
               maxlength="30"
               autocomplete="username"
-              placeholder="nguyenvana"
+              placeholder="Ví dụ: cattuong, cattuong123"
+              [class.border-red-400]="userNameError"
               class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm outline-none focus:border-emerald-500"/>
+            @if (userNameError) {
+              <p class="text-xs text-red-600 mt-1" role="alert">{{ userNameError }}</p>
+            } @else {
+              <p class="text-xs text-gray-400 mt-1">Từ 3–30 ký tự, viết liền không dấu (chữ, số, _, -, .)</p>
+            }
           </div>
 
           <div>
@@ -168,10 +175,10 @@
               [type]="showPassword ? 'text' : 'password'"
               [(ngModel)]="password"
               required
-              minlength="8"
+              minlength="6"
               maxlength="72"
               autocomplete="new-password"
-              placeholder="Ít nhất 8 ký tự"
+              placeholder="Ít nhất 6 ký tự"
               class="w-full px-4 py-3 pr-12 rounded-xl bg-gray-50 border border-gray-200 text-sm outline-none focus:border-emerald-500"/>
             <button
               type="button"
@@ -183,11 +190,11 @@
           </div>
 
           <p class="text-xs text-gray-400 mt-2">
-            Cần có chữ hoa, chữ thường, số và ký tự đặc biệt.
+            Tối thiểu 6 ký tự (nên kết hợp chữ và số để tăng bảo mật).
           </p>
           @if (password && !isStrongPassword) {
             <p class="text-xs text-red-600 mt-1">
-              Mật khẩu phải có chữ hoa, chữ thường, số, ký tự đặc biệt và dài 8–72 ký tự.
+              Mật khẩu cần có ít nhất 6 ký tự.
             </p>
           }
         </div>

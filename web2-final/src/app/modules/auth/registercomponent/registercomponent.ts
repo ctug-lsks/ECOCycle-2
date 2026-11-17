@@ -28,6 +28,7 @@ export class Registercomponent {
   loading = false;
   errorMessage = '';
   emailError = '';
+  userNameError = '';
   successMessage = '';
 
   constructor(
@@ -38,7 +39,26 @@ export class Registercomponent {
   ) {}
 
   get isStrongPassword(): boolean {
-    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/.test(this.password);
+    return Boolean(this.password && this.password.length >= 6);
+  }
+
+  onUserNameChange(): void {
+    const val = this.userName.trim();
+    if (!val) {
+      this.userNameError = '';
+      return;
+    }
+    if (val.length < 3) {
+      this.userNameError = 'Username phải có ít nhất 3 ký tự.';
+    } else if (val.length > 30) {
+      this.userNameError = 'Username tối đa 30 ký tự.';
+    } else if (/\s/.test(val)) {
+      this.userNameError = 'Username không được chứa khoảng trắng (dấu cách).';
+    } else if (!/^[a-zA-Z0-9_.-]+$/.test(val)) {
+      this.userNameError = 'Username chỉ dùng chữ không dấu, số, dấu _, . hoặc - (không dùng tiếng Việt có dấu).';
+    } else {
+      this.userNameError = '';
+    }
   }
 
   onSubmit(): void {
@@ -47,6 +67,14 @@ export class Registercomponent {
     this.successMessage = '';
 
     if (this.loading) {
+      return;
+    }
+
+    this.onUserNameChange();
+    if (this.userNameError) {
+      this.errorMessage = this.userNameError;
+      this.toastService.showToast(this.errorMessage, 'error', 'Username chưa hợp lệ');
+      document.getElementById('userName')?.focus();
       return;
     }
 
@@ -78,16 +106,13 @@ export class Registercomponent {
 
     if (this.password !== this.confirmPassword) {
       this.errorMessage = 'Mật khẩu xác nhận không khớp.';
+      this.toastService.showToast(this.errorMessage, 'error', 'Mật khẩu không khớp');
       return;
     }
 
-    const strongPassword =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/
-        .test(this.password);
-
-    if (!strongPassword) {
-      this.errorMessage =
-        'Mật khẩu cần có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.';
+    if (this.password.length < 6) {
+      this.errorMessage = 'Mật khẩu cần có ít nhất 6 ký tự.';
+      this.toastService.showToast(this.errorMessage, 'error', 'Mật khẩu quá ngắn');
       return;
     }
 

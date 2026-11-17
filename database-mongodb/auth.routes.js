@@ -131,7 +131,7 @@ function createAuthRouter(db) {
         !/^[a-zA-Z0-9_.-]+$/.test(normalizedUserName)
       ) {
         return res.status(400).json({
-          message: "Username dài 3–30 ký tự, chỉ dùng chữ, số, _, dấu chấm hoặc gạch ngang."
+          message: "Username dài 3–30 ký tự, viết liền không dấu (chỉ dùng chữ cái không dấu, số, dấu _, . hoặc -)."
         });
       }
 
@@ -154,15 +154,11 @@ function createAuthRouter(db) {
 
       if (
         typeof password !== "string" ||
-        password.length < 8 ||
-        password.length > 72 ||
-        !/[a-z]/.test(password) ||
-        !/[A-Z]/.test(password) ||
-        !/[0-9]/.test(password) ||
-        !/[^A-Za-z0-9]/.test(password)
+        password.length < 6 ||
+        password.length > 72
       ) {
         return res.status(400).json({
-          message: "Mật khẩu cần tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt."
+          message: "Mật khẩu cần tối thiểu 6 ký tự."
         });
       }
 
