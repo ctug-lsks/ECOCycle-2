@@ -22,6 +22,7 @@ export class Registercomponent {
   password = '';
   confirmPassword = '';
   showPassword = false;
+  showConfirmPassword = false;
 
   role: 'CUSTOMER' | 'SELLER' = 'CUSTOMER';
 
