@@ -39,7 +39,7 @@ export class Registercomponent {
   ) {}
 
   get isStrongPassword(): boolean {
-    return Boolean(this.password && this.password.length >= 6);
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/.test(this.password);
   }
 
   onUserNameChange(): void {
@@ -110,9 +110,14 @@ export class Registercomponent {
       return;
     }
 
-    if (this.password.length < 6) {
-      this.errorMessage = 'Mật khẩu cần có ít nhất 6 ký tự.';
-      this.toastService.showToast(this.errorMessage, 'error', 'Mật khẩu quá ngắn');
+    const strongPassword =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/
+        .test(this.password);
+
+    if (!strongPassword) {
+      this.errorMessage =
+        'Mật khẩu cần có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.';
+      this.toastService.showToast(this.errorMessage, 'error', 'Mật khẩu chưa đủ mạnh');
       return;
     }
 

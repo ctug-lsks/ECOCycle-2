@@ -175,10 +175,10 @@
               [type]="showPassword ? 'text' : 'password'"
               [(ngModel)]="password"
               required
-              minlength="6"
+              minlength="8"
               maxlength="72"
               autocomplete="new-password"
-              placeholder="Ít nhất 6 ký tự"
+              placeholder="Ít nhất 8 ký tự"
               class="w-full px-4 py-3 pr-12 rounded-xl bg-gray-50 border border-gray-200 text-sm outline-none focus:border-emerald-500"/>
             <button
               type="button"
@@ -190,11 +190,11 @@
           </div>
 
           <p class="text-xs text-gray-400 mt-2">
-            Tối thiểu 6 ký tự (nên kết hợp chữ và số để tăng bảo mật).
+            Cần có chữ hoa, chữ thường, số và ký tự đặc biệt.
           </p>
           @if (password && !isStrongPassword) {
             <p class="text-xs text-red-600 mt-1">
-              Mật khẩu cần có ít nhất 6 ký tự.
+              Mật khẩu phải có chữ hoa, chữ thường, số, ký tự đặc biệt và dài 8–72 ký tự.
             </p>
           }
         </div>

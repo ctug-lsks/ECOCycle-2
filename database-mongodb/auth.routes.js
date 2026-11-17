@@ -154,11 +154,15 @@ function createAuthRouter(db) {
 
       if (
         typeof password !== "string" ||
-        password.length < 6 ||
-        password.length > 72
+        password.length < 8 ||
+        password.length > 72 ||
+        !/[a-z]/.test(password) ||
+        !/[A-Z]/.test(password) ||
+        !/[0-9]/.test(password) ||
+        !/[^A-Za-z0-9]/.test(password)
       ) {
         return res.status(400).json({
-          message: "Mật khẩu cần tối thiểu 6 ký tự."
+          message: "Mật khẩu cần tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt."
         });
       }
 
