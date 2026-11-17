@@ -26,7 +26,42 @@ export class ProductList implements OnInit {
   
   selectedConditions: string[] = [];
   
-  availableProvinces: string[] = ['TP.HCM', 'Đà Nẵng', 'Hà Nội', 'Bình Dương', 'Cần Thơ', 'Đồng Nai', 'Hải Phòng'];
+  availableProvinces: string[] = [
+    'TP. Hồ Chí Minh',
+    'TP. Hà Nội',
+    'TP. Hải Phòng',
+    'TP. Đà Nẵng',
+    'TP. Cần Thơ',
+    'TP. Huế',
+    'TP. Đồng Nai',
+    'An Giang',
+    'Bắc Ninh',
+    'Cà Mau',
+    'Cao Bằng',
+    'Đắk Lắk',
+    'Điện Biên',
+    'Đồng Tháp',
+    'Gia Lai',
+    'Hà Tĩnh',
+    'Hưng Yên',
+    'Khánh Hòa',
+    'Lai Châu',
+    'Lâm Đồng',
+    'Lạng Sơn',
+    'Lào Cai',
+    'Nghệ An',
+    'Ninh Bình',
+    'Phú Thọ',
+    'Quảng Ngãi',
+    'Quảng Ninh',
+    'Quảng Trị',
+    'Sơn La',
+    'Tây Ninh',
+    'Thái Nguyên',
+    'Thanh Hóa',
+    'Tuyên Quang',
+    'Vĩnh Long'
+  ];
   selectedLocations: string[] = [];
 
   currentPage: number = 1;

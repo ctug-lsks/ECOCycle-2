@@ -17,13 +17,46 @@ export class Checkout implements OnInit {
 
   fullName: string = '';
   phoneNumber: string = '';
-  province: string = 'TP.HCM';
+  province: string = 'TP. Hồ Chí Minh';
   district: string = '';
   addressDetail: string = '';
   note: string = '';
 
   availableProvinces: string[] = [
-    'TP.HCM', 'Đà Nẵng', 'Hà Nội', 'Bình Dương', 'Cần Thơ', 'Đồng Nai', 'Hải Phòng'
+    'TP. Hồ Chí Minh',
+    'TP. Hà Nội',
+    'TP. Hải Phòng',
+    'TP. Đà Nẵng',
+    'TP. Cần Thơ',
+    'TP. Huế',
+    'TP. Đồng Nai',
+    'An Giang',
+    'Bắc Ninh',
+    'Cà Mau',
+    'Cao Bằng',
+    'Đắk Lắk',
+    'Điện Biên',
+    'Đồng Tháp',
+    'Gia Lai',
+    'Hà Tĩnh',
+    'Hưng Yên',
+    'Khánh Hòa',
+    'Lai Châu',
+    'Lâm Đồng',
+    'Lạng Sơn',
+    'Lào Cai',
+    'Nghệ An',
+    'Ninh Bình',
+    'Phú Thọ',
+    'Quảng Ngãi',
+    'Quảng Ninh',
+    'Quảng Trị',
+    'Sơn La',
+    'Tây Ninh',
+    'Thái Nguyên',
+    'Thanh Hóa',
+    'Tuyên Quang',
+    'Vĩnh Long'
   ];
 
   shippingFees = {
@@ -79,18 +112,36 @@ export class Checkout implements OnInit {
           } else {
             const fullAddr = details?.address || '';
             if (fullAddr) {
-            const parts = fullAddr.split(',').map((s: string) => s.trim());
-            if (parts.length >= 3) {
-              this.addressDetail = parts.slice(0, parts.length - 2).join(', ');
-              this.district = parts[parts.length - 2];
-              this.province = parts[parts.length - 1];
-            } else if (parts.length === 2) {
-              this.addressDetail = parts[0];
-              this.district = parts[1];
-            } else {
-              this.addressDetail = fullAddr;
+              const parts = fullAddr.split(',').map((s: string) => s.trim());
+              if (parts.length >= 3) {
+                this.addressDetail = parts.slice(0, parts.length - 2).join(', ');
+                this.district = parts[parts.length - 2];
+                this.province = parts[parts.length - 1];
+              } else if (parts.length === 2) {
+                this.addressDetail = parts[0];
+                this.district = parts[1];
+              } else {
+                this.addressDetail = fullAddr;
+              }
             }
-            }
+          }
+          if (this.province === 'TP.HCM' || this.province === 'Hồ Chí Minh' || this.province === 'TP HCM') {
+            this.province = 'TP. Hồ Chí Minh';
+          } else if (this.province === 'Hà Nội') {
+            this.province = 'TP. Hà Nội';
+          } else if (this.province === 'Đà Nẵng') {
+            this.province = 'TP. Đà Nẵng';
+          } else if (this.province === 'Hải Phòng') {
+            this.province = 'TP. Hải Phòng';
+          } else if (this.province === 'Cần Thơ') {
+            this.province = 'TP. Cần Thơ';
+          } else if (this.province === 'Huế' || this.province === 'Thừa Thiên Huế') {
+            this.province = 'TP. Huế';
+          } else if (this.province === 'Đồng Nai' || this.province === 'Bình Phước') {
+            this.province = 'TP. Đồng Nai';
+          }
+          if (!this.availableProvinces.includes(this.province)) {
+            this.province = 'TP. Hồ Chí Minh';
           }
         }
        
