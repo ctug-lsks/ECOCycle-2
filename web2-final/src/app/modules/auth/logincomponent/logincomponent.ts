@@ -1,5 +1,5 @@
 
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
@@ -20,7 +20,8 @@ export class Logincomponent implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -41,12 +42,14 @@ export class Logincomponent implements OnInit {
     }
 
     this.loading = true;
+    this.cdr.detectChanges();
 
     this.authService
       .login(this.identifier.trim(), this.password)
       .subscribe({
         next: () => {
           this.loading = false;
+          this.cdr.detectChanges();
 
           const user = this.authService.currentUser;
 
@@ -80,7 +83,7 @@ export class Logincomponent implements OnInit {
 
           if (error.status === 0) {
             this.errorMessage =
-              'Không kết nối được máy chủ. Hãy kiểm tra backend tại cổng 3000.';
+              'Không thể kết nối máy chủ. Máy chủ có thể đang thức dậy (Cold Start), vui lòng chờ vài giây rồi thử lại.';
           } else if (error.status === 401) {
             this.errorMessage =
               error.error?.message ||
@@ -90,6 +93,7 @@ export class Logincomponent implements OnInit {
               error.error?.message ||
               'Không thể đăng nhập. Vui lòng thử lại.';
           }
+          this.cdr.detectChanges();
         },
       });
   }
