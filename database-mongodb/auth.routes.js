@@ -182,7 +182,7 @@ function createAuthRouter(db) {
       }
       if (normalizedProvince.length > 100 || normalizedDistrict.length > 100 ||
           normalizedStreetAddress.length < 3 || normalizedStreetAddress.length > 250) {
-        return res.status(400).json({ message: "Địa chỉ tỉnh/thành, quận/huyện hoặc số nhà/đường không hợp lệ." });
+        return res.status(400).json({ message: "Địa chỉ tỉnh/thành, xã/phường/đặc khu hoặc số nhà/đường không hợp lệ." });
       }
       if (selectedRole === "SELLER" &&
           (normalizedBusinessName.length < 2 || normalizedBusinessName.length > 120 ||
