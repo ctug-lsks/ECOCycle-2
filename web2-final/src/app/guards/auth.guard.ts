@@ -31,7 +31,6 @@ export const adminGuard: CanActivateFn = (_route, state) => {
   if (!authService.isLoggedIn) {
     router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
   } else {
-    // Đã đăng nhập nhưng không phải ADMIN -> điều hướng về trang mua hàng
     router.navigate(['/mua-hang']);
   }
   return false;

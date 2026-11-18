@@ -501,7 +501,6 @@ function createAuthRouter(db) {
     }
   });
 
-  // Avatar được lưu dưới dạng data URL trong MongoDB (giới hạn 2 MB).
   router.put('/avatar', async (req, res) => {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';

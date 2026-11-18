@@ -139,7 +139,6 @@ export class AuthService {
 
       const data = JSON.parse(raw);
 
-      // Không bao giờ khôi phục password từ localStorage.
       delete data.password;
 
       return this.normalizeUser(data);

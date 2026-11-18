@@ -91,7 +91,7 @@ export class ChatService {
       { receiverID, productID }
     );
   }
-  // Tạo hoặc mở cuộc trò chuyện hỗ trợ Admin
+
   createSupportConversation() {
     return this.http.post<ChatConversation>(
       `${this.apiUrl}/support`,

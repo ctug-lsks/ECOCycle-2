@@ -73,7 +73,6 @@ export class ProductPost implements OnInit {
       next: (res: any) => {
         this.isSubmitting = false;
         this.toastService.showToast(res.message || 'Đã gửi yêu cầu đăng bán thành công!', 'success');
-        // Đồng bộ lại phiên đăng nhập để cập nhật vai trò SELLER và mở mục Quản lý sản phẩm ngay lập tức
         this.authService.restoreSession().subscribe({
           next: () => {
             this.router.navigate(['/quan-ly-san-pham']);

@@ -18,14 +18,12 @@ import { getAvatarUrl } from '../../utils/avatar.util';
   styleUrl: './header.css'
 })
 export class HeaderComponent implements OnInit, OnDestroy {
-  // Điều hướng chính
   navItems = signal<NavItem[]>([
     { id: 'mua-hang', label: 'Sản phẩm', href: '/mua-hang' },
     { id: 'sua-chua', label: 'Sửa chữa', href: '/sua-chua' },
     { id: 'moi-truong', label: 'Môi trường', href: '/moi-truong' }
   ]);
 
-  // Trạng thái giao diện và dữ liệu Header
   searchTerm = signal<string>('');
   cartCount = signal<number>(3);
   userCoins = signal<number>(0);
@@ -48,7 +46,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private authService: AuthService
   ) {}
 
-  // Khởi tạo dữ liệu
   ngOnInit(): void {
     this.currentUser.set(this.authService.currentUser);
     this.authService.currentUser$.subscribe(user => {
@@ -63,7 +60,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
         this.hasNotification.set(false);
       }
     });
-    // Cập nhật badge thông báo định kỳ, không cần mở chuông.
     this.notificationRefresh.add(interval(45000).subscribe(() => {
       const userID = this.currentUser()?.userID;
       if (userID) {
@@ -80,7 +76,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.notificationRefresh.unsubscribe();
   }
 
-  // Hồ sơ và thông báo
   loadUserProfile(userID: string): void {
     this.http.get<User>(`${environment.apiUrl}/users/${encodeURIComponent(userID)}`).subscribe({
       next: (user) => {
@@ -116,7 +111,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Điều khiển menu và dropdown
   toggleMenu(): void {
     this.isMenuOpen.update(v => !v);
   }
@@ -150,8 +144,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isUserDropdownOpen.set(false);
   }
 
-
-  // Xử lý thông báo
   onNotificationClick(item: NotificationItem): void {
     if (!item.isRead && item.notificationID) {
       this.http.put(
@@ -173,7 +165,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.closeNotificationDropdown();
 
     if (item.targetID && item.targetID.startsWith('OD')) {
-      // Truyền mã đơn hàng để trang đích có thể chọn đúng đơn.
       this.router.navigate(['/don-hang-da-dat'], {
         queryParams: { orderID: item.targetID }
       });
@@ -242,7 +233,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Tìm kiếm và tài khoản
   onSearchInput(val: string): void {
     this.searchTerm.set(val);
   }
@@ -271,8 +261,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    // Giữ dropdown khi bấm nút kích hoạt hoặc thao tác trong chính dropdown.
-    // Bấm vào bất kỳ vùng nào khác (kể cả khoảng trống Header) sẽ đóng.
     if (!target.closest('[data-header-popup]')) {
       this.closeIconDropdowns();
     }

@@ -112,7 +112,6 @@ export class EnvironmentDashboard implements OnInit, OnDestroy {
           this.community = data;
           this.loadingCommunity = false;
 
-          // Cập nhật giao diện sau khi API trả dữ liệu
           this.cdr.detectChanges();
         },
         error: (error) => {
@@ -139,7 +138,6 @@ export class EnvironmentDashboard implements OnInit, OnDestroy {
           this.personal = data;
           this.loadingPersonal = false;
 
-          // Cập nhật giao diện cá nhân
           this.cdr.detectChanges();
         },
         error: (error) => {

@@ -23,7 +23,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   saving = false;
   uploadingAvatar = false;
   avatarPreview: string | null = null;
-  // Trình chỉnh sửa ảnh đại diện
   @ViewChild('cropCanvas')
   cropCanvas?: ElementRef<HTMLCanvasElement>;
 
@@ -118,7 +117,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.cropY = 50;
         this.cropDialogOpen = true;
 
-        // Tạo canvas sau khi modal được hiển thị
         this.cdr.detectChanges();
         this.renderCropPreview();
       };
@@ -134,7 +132,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     reader.readAsDataURL(file);
   }
 
-  // Vẽ ảnh đã crop lên canvas xem trước
   renderCropPreview(): void {
     const image = this.selectedAvatarImage;
     const canvas = this.cropCanvas?.nativeElement;
@@ -144,7 +141,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.drawCroppedImage(canvas, 280);
   }
 
-  // Xử lý crop ảnh theo tỷ lệ vuông
   private drawCroppedImage(
     canvas: HTMLCanvasElement,
     outputSize: number
@@ -189,12 +185,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     );
   }
 
-  // Khi thay đổi thanh điều chỉnh
   onCropChange(): void {
     this.renderCropPreview();
   }
 
-  // Khôi phục vị trí ban đầu
   resetCrop(): void {
     this.cropZoom = 100;
     this.cropX = 50;
@@ -203,7 +197,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.renderCropPreview();
   }
 
-  // Đóng trình chỉnh sửa
   closeCropEditor(): void {
     if (this.uploadingAvatar) return;
 
@@ -212,7 +205,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.avatarPreview = null;
   }
 
-  // Lưu ảnh đã chỉnh sửa
   saveCroppedAvatar(): void {
     if (this.uploadingAvatar || !this.selectedAvatarImage) {
       return;

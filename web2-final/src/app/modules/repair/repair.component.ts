@@ -725,7 +725,6 @@ export class RepairComponent implements OnInit, OnDestroy {
         request.userChoice = response.userChoice;
         this.choosingOrderID = null;
         if (option === 'resell') {
-          // Làm mới session để tài khoản cập nhật ngay vai trò SELLER và mở mục Quản lý sản phẩm trên Header
           this.authService.restoreSession().subscribe();
         }
         this.toastService.showToast(

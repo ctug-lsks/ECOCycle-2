@@ -105,15 +105,12 @@ export class SellerProducts implements OnInit {
   applyFilter(): void {
     const kw = this.searchTerm.trim().toLowerCase();
     this.filteredProducts = this.products.filter(item => {
-      // 1. Lọc theo từ khóa
       const matchKeyword = !kw || 
         (item.title && item.title.toLowerCase().includes(kw)) ||
         (item.id && item.id.toLowerCase().includes(kw));
 
-      // 2. Lọc theo danh mục
       const matchCategory = this.selectedCategory === 'ALL' || item.cateID === this.selectedCategory;
 
-      // 3. Lọc theo trạng thái
       let matchStatus = true;
       const st = (item.status || '').toLowerCase();
       if (this.selectedStatus === 'CON_HANG') {

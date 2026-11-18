@@ -8,7 +8,6 @@ import type { FooterColumn } from '../../classes/admin';
   styleUrl: './footer.css'
 })
 export class FooterComponent {
-  // Nội dung tĩnh: không cần signal vì không thay đổi trong quá trình sử dụng.
   readonly copyright = `© ${new Date().getFullYear()} ECOCycle. Tất cả quyền được bảo lưu.`;
 
   readonly columns: FooterColumn[] = [
@@ -41,7 +40,6 @@ export class FooterComponent {
     }
   ];
 
-  // Trạng thái biểu mẫu đăng ký nhận tin.
   readonly email = signal('');
   readonly consent = signal(false);
   readonly noteMessage = signal('');
@@ -60,7 +58,6 @@ export class FooterComponent {
       return;
     }
 
-    // TODO: Kết nối API đăng ký nhận tin trước khi thông báo thành công.
     this.noteMessage.set('Chức năng đăng ký nhận tin đang được hoàn thiện.');
   }
 }

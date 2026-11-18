@@ -161,7 +161,6 @@ module.exports = async function registerChat({
   await conversations.createIndex({ participants: 1, updatedAt: -1 });
   await messages.createIndex({ conversationID: 1, createdAt: 1 });
 
-  // Xác thực JWT khi kết nối Socket.IO
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -192,7 +191,6 @@ module.exports = async function registerChat({
       return conv;
     }
 
-    // Nếu cuộc trò chuyện là 'support' và user là ADMIN, cho phép truy cập
     if (conv.type === 'support') {
       const user = await users.findOne({ userID }, { projection: { role: 1 } });
       if (user && user.role === 'ADMIN') {
@@ -203,7 +201,6 @@ module.exports = async function registerChat({
     return null;
   }
 
-  // REST API: Danh sách cuộc trò chuyện của người đang đăng nhập
   app.get('/api/chat/conversations', authenticate, async (req, res) => {
     try {
       const currentUser = await users.findOne(
@@ -234,7 +231,6 @@ module.exports = async function registerChat({
     }
   });
 
-  // REST API: Tạo hoặc mở cuộc trò chuyện
   app.post('/api/chat/conversations', authenticate, async (req, res) => {
     try {
       const senderID = String(req.auth.userID);
@@ -258,7 +254,6 @@ module.exports = async function registerChat({
       const participants = [senderID, receiverID].sort();
       const productID = String(req.body.productID || '').trim();
 
-      // Một cuộc trò chuyện cho mỗi cặp người dùng và sản phẩm
       const existing = await conversations.findOne({
         type: { $ne: 'support' },
         participants,
@@ -279,7 +274,6 @@ module.exports = async function registerChat({
 
       const result = await conversations.insertOne(doc);
 
-      // Tạo nội dung tin nhắn chào
       const welcomeMessage = {
         conversationID: result.insertedId.toString(),
         senderID: 'SYSTEM',
@@ -289,10 +283,8 @@ module.exports = async function registerChat({
         isRead: false
       };
 
-      // Lưu tin nhắn chào vào MongoDB
       const welcomeResult = await messages.insertOne(welcomeMessage);
 
-      // Cập nhật tin nhắn cuối cùng của cuộc trò chuyện
       await conversations.updateOne(
         { _id: result.insertedId },
         {
@@ -303,13 +295,11 @@ module.exports = async function registerChat({
         }
       );
 
-      // Chuẩn bị dữ liệu tin nhắn để gửi cho người dùng
       const savedWelcomeMessage = {
         ...welcomeMessage,
         _id: welcomeResult.insertedId
       };
 
-      // Thông báo tin nhắn mới bằng Socket.IO
       for (const participant of participants) {
         io.to(`user:${participant}`).emit(
           'chat:message',
@@ -317,7 +307,6 @@ module.exports = async function registerChat({
         );
       }
 
-      // Trả kết quả cho Angular
       res.status(201).json({
         ...doc,
         _id: result.insertedId,
@@ -327,13 +316,10 @@ module.exports = async function registerChat({
       res.status(500).json({ message: 'Không thể tạo cuộc trò chuyện' });
     }
   });
-  // REST API: Tạo hoặc mở cuộc trò chuyện hỗ trợ Admin
   app.post('/api/chat/support', authenticate, async (req, res) => {
     try {
-      // Lấy ID người đang đăng nhập
       const userID = String(req.auth.userID);
 
-      // Tìm một tài khoản Admin trong MongoDB
       const admin = await users.findOne(
         {
           role: 'ADMIN',
@@ -350,11 +336,9 @@ module.exports = async function registerChat({
         });
       }
 
-      // Xác định hai người tham gia
       const adminID = String(admin.userID);
       const participants = [userID, adminID].sort();
 
-      // Kiểm tra đã có cuộc trò chuyện hỗ trợ chưa
       const existing = await conversations.findOne({
         type: 'support',
         $or: [
@@ -368,7 +352,6 @@ module.exports = async function registerChat({
         return res.json(conversation);
       }
 
-      // Tạo cuộc trò chuyện hỗ trợ mới
       const now = new Date();
 
       const doc = {
@@ -385,7 +368,6 @@ module.exports = async function registerChat({
 
       const result = await conversations.insertOne(doc);
 
-      // Tạo lời chào hỗ trợ tự động
       const welcomeMessage = {
         conversationID: result.insertedId.toString(),
         senderID: 'SYSTEM',
@@ -397,7 +379,6 @@ module.exports = async function registerChat({
 
       const welcomeResult = await messages.insertOne(welcomeMessage);
 
-      // Cập nhật tin nhắn cuối cùng
       await conversations.updateOne(
         { _id: result.insertedId },
         {
@@ -408,7 +389,6 @@ module.exports = async function registerChat({
         }
       );
 
-      // Thông báo cho người dùng
       const savedMessage = {
         ...welcomeMessage,
         _id: welcomeResult.insertedId
@@ -422,7 +402,6 @@ module.exports = async function registerChat({
       }
       io.to(`chat:${result.insertedId}`).emit('chat:message', savedMessage);
 
-      // Trả cuộc trò chuyện về Angular
       const [conversation] = await attachParticipantNames([
         {
           ...doc,
@@ -444,18 +423,15 @@ module.exports = async function registerChat({
     }
   });
 
-  // API xử lý các chủ đề hỗ trợ tự động
   app.post(
     '/api/chat/support/:conversationID/topic',
     authenticate,
     async (req, res) => {
       try {
-        // Lấy thông tin từ Angular
         const userID = String(req.auth.userID);
         const conversationID = String(req.params.conversationID);
         const topicID = String(req.body.topicID || '');
 
-        // Danh sách câu trả lời tự động
         const topics = {
           order: {
             label: 'Đơn hàng',
@@ -479,7 +455,6 @@ module.exports = async function registerChat({
           }
         };
 
-        // Kiểm tra chủ đề có hợp lệ không
         const topic = topics[topicID];
 
         if (!topic) {
@@ -488,7 +463,6 @@ module.exports = async function registerChat({
           });
         }
 
-        // Kiểm tra cuộc trò chuyện hỗ trợ
         if (!ObjectId.isValid(conversationID)) {
           return res.status(400).json({
             message: 'Mã cuộc trò chuyện không hợp lệ.'
@@ -507,7 +481,6 @@ module.exports = async function registerChat({
           });
         }
 
-        // Tạo tin nhắn thể hiện lựa chọn của người dùng
         const now = new Date();
 
         const userMessage = {
@@ -521,7 +494,6 @@ module.exports = async function registerChat({
 
         const userResult = await messages.insertOne(userMessage);
 
-        // Tạo câu trả lời tự động của hệ thống
         const botMessage = {
           conversationID,
           senderID: 'SYSTEM',
@@ -533,7 +505,6 @@ module.exports = async function registerChat({
 
         const botResult = await messages.insertOne(botMessage);
 
-        // Cập nhật tin nhắn cuối cùng và trạng thái kết nối Admin
         const updateFields = {
           lastMessage: botMessage.content,
           updatedAt: new Date()
@@ -547,7 +518,6 @@ module.exports = async function registerChat({
           { $set: updateFields }
         );
 
-        // Gửi hai tin nhắn đến người tham gia qua Socket.IO
         const savedUserMessage = {
           ...userMessage,
           _id: userResult.insertedId
@@ -579,7 +549,6 @@ module.exports = async function registerChat({
         io.to(`chat:${conversationID}`).emit('chat:message', savedUserMessage);
         io.to(`chat:${conversationID}`).emit('chat:message', savedBotMessage);
 
-        // Trả kết quả cho Angular
         res.json({
           ok: true,
           userMessage: savedUserMessage,
@@ -596,7 +565,6 @@ module.exports = async function registerChat({
     }
   );
 
-  // REST API: Lấy lịch sử tin nhắn
   app.get('/api/chat/conversations/:id/messages', authenticate, async (req, res) => {
     try {
       const conversation = await getConversation(
@@ -622,7 +590,6 @@ module.exports = async function registerChat({
     }
   });
 
-  // Kết nối real-time
   app.post(
     '/api/chat/conversations/:id/images',
     authenticate,
@@ -653,7 +620,6 @@ module.exports = async function registerChat({
             });
           }
 
-          // Kiểm tra định dạng thật của ảnh, không chỉ dựa vào MIME.
           const buffer = fs.readFileSync(file.path);
           const isJPEG = buffer.length >= 3 &&
             buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
@@ -832,7 +798,6 @@ module.exports = async function registerChat({
           _id: result.insertedId
         };
 
-        // Gửi cho tất cả thành viên cuộc trò chuyện
         for (const participant of conversation.participants || []) {
           io.to(`user:${participant}`).emit('chat:message', savedMessage);
         }

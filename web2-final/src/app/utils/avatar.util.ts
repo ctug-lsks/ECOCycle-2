@@ -8,14 +8,14 @@ export function getInitials(name: string): string {
 }
 
 const PALETTES: [string, string][] = [
-  ['#059669', '#047857'], // Emerald
-  ['#2563eb', '#1d4ed8'], // Blue
-  ['#7c3aed', '#6d28d9'], // Violet
-  ['#db2777', '#be185d'], // Pink
-  ['#d97706', '#b45309'], // Amber
-  ['#0891b2', '#0e7490'], // Cyan
-  ['#4f46e5', '#4338ca'], // Indigo
-  ['#0d9488', '#0f766e'], // Teal
+  ['#059669', '#047857'],
+  ['#2563eb', '#1d4ed8'],
+  ['#7c3aed', '#6d28d9'],
+  ['#db2777', '#be185d'],
+  ['#d97706', '#b45309'],
+  ['#0891b2', '#0e7490'],
+  ['#4f46e5', '#4338ca'],
+  ['#0d9488', '#0f766e'],
 ];
 
 export function getAvatarUrl(

@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
-// Cấu trúc dữ liệu thống kê môi trường
 export interface EnvironmentStats {
   devicesListed: number;
   devicesPurchased: number;
@@ -24,14 +23,12 @@ export class EnvironmentService {
 
   constructor(private http: HttpClient) {}
 
-  // Thống kê môi trường toàn hệ thống
   getCommunityStats(): Observable<EnvironmentStats> {
     return this.http.get<EnvironmentStats>(
       `${this.apiUrl}/dashboard`
     );
   }
 
-  // Thống kê môi trường của người dùng đang đăng nhập
   getPersonalStats(): Observable<EnvironmentStats> {
     return this.http.get<EnvironmentStats>(
       `${this.apiUrl}/me`

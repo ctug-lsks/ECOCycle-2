@@ -123,7 +123,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
         this.uploadingImage = false;
         this.removeSelectedImage();
 
-        // Dự phòng nếu Socket.IO chưa nhận sự kiện.
         if (this.selectedConversation?._id === conversationID &&
             !this.messages.some(item => item._id === message._id)) {
           this.messages = [...this.messages, message];
@@ -229,7 +228,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
         const fromProduct =
           !!this.route.snapshot.queryParamMap.get('returnUrl');
 
-        // Chỉ đưa người bán lên đầu khi đi từ trang sản phẩm
         this.conversations = fromProduct && conversationID
           ? [
               ...data.filter(item => item._id === conversationID),
@@ -237,7 +235,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
             ]
           : data;
 
-        // Tự động mở cuộc trò chuyện được truyền từ trang sản phẩm
         if (conversationID) {
           const conversation = data.find(
             item => item._id === conversationID
@@ -302,23 +299,19 @@ export class ChatPageComponent implements OnInit, OnDestroy {
     });
   }
   selectSupportTopic(topicID: string): void {
-    // Kiểm tra đang mở Chat hỗ trợ hay không
     const conversation = this.selectedConversation;
 
     if (!conversation || conversation.type !== 'support') {
       return;
     }
 
-    // Tránh nhấn nhiều lần khi đang xử lý
     if (this.sendingSupportTopic) {
       return;
     }
 
-    // Bắt đầu xử lý
     this.sendingSupportTopic = true;
     this.errorMessage = '';
 
-    // Gửi chủ đề đã chọn đến backend
     this.chatService.sendSupportTopic(
       conversation._id,
       topicID
@@ -327,7 +320,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
         this.sendingSupportTopic = false;
         this.showSupportTopics = false;
 
-        // Tải lại tin nhắn để bảo đảm thấy câu trả lời
         const conversation = this.selectedConversation;
 
         if (conversation) {
@@ -350,7 +342,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
       },
 
       error: error => {
-        // Có lỗi thì cho phép thử lại
         this.sendingSupportTopic = false;
         this.errorMessage =
           error.error?.message || 'Không thể xử lý chủ đề hỗ trợ.';
@@ -553,8 +544,6 @@ export class ChatPageComponent implements OnInit, OnDestroy {
     const keyword = this.conversationSearch.trim().toLowerCase();
     const isAdmin = (this.authService.currentUser as any)?.role === 'ADMIN';
 
-    // Đối với người dùng thường: lọc bỏ support conversation vì đã có nút ghim
-    // Đối với Admin: hiển thị toàn bộ bao gồm cả support conversations!
     const availableConversations = this.conversations.filter(conversation => {
       if (conversation.type === 'support') {
         return isAdmin;

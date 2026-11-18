@@ -14,7 +14,6 @@ const dns = require('dns');
 try {
   dns.setServers(['8.8.8.8', '1.1.1.1']);
 } catch (e) {
-  // Ignore DNS override errors if in restricted environment
 }
 
 const app = express();
@@ -156,7 +155,6 @@ app.get('/api/admin/product-requests', authenticate, requireAdmin, async (_req, 
   }
 });
 
-// Người dùng gửi yêu cầu đăng bán sản phẩm (Customer hoặc Seller)
 app.post('/api/product-requests', authenticate, async (req, res) => {
   try {
     const { title, cateID, condition, fromPrice, price, img, description } = req.body;
@@ -175,9 +173,6 @@ app.post('/api/product-requests', authenticate, async (req, res) => {
 
     const user = await getCollection('users').findOne({ userID: req.auth.userID });
     
-    // Quy định GreenCoin theo bản chất sản phẩm:
-    // Hàng mới 100% / Brandnew / Nguyên seal -> 0 Green Coin
-    // Đồ cũ / Đã qua sử dụng / Tái chế / Like new 99% -> 1.000 Green Coin khi Admin duyệt
     const condNormalized = String(condition || '').toLowerCase().trim();
     const isBrandNew = condNormalized === 'mới 100%' || 
                        condNormalized === 'mới' || 
@@ -187,7 +182,6 @@ app.post('/api/product-requests', authenticate, async (req, res) => {
                        condNormalized.includes('brandnew');
     const greenCoins = isBrandNew ? 0 : 1000;
 
-    // Tự động kích hoạt vai trò SELLER khi người dùng đăng bán sản phẩm
     let currentRole = user ? user.role : 'CUSTOMER';
     if (user && user.role !== 'SELLER' && user.role !== 'ADMIN') {
       await getCollection('users').updateOne(
@@ -239,7 +233,6 @@ app.post('/api/product-requests', authenticate, async (req, res) => {
   }
 });
 
-// Lấy danh sách yêu cầu đăng bán của chính người dùng đang đăng nhập
 app.get('/api/product-requests', authenticate, async (req, res) => {
   try {
     const requests = await getCollection('productRequests')
@@ -253,7 +246,6 @@ app.get('/api/product-requests', authenticate, async (req, res) => {
   }
 });
 
-// API Quản lý sản phẩm dành cho Seller (Lấy toàn bộ sản phẩm của Seller: đang bán, chờ duyệt, hết hàng/đã bán)
 app.get('/api/seller/my-products', authenticate, async (req, res) => {
   try {
     const sellerId = req.auth.userID;
@@ -316,13 +308,11 @@ app.get('/api/seller/my-products', authenticate, async (req, res) => {
   }
 });
 
-// Xóa hoặc gỡ sản phẩm khỏi gian hàng của Seller
 app.delete('/api/seller/products/:productId', authenticate, async (req, res) => {
   try {
     const { productId } = req.params;
     const sellerId = req.auth.userID;
 
-    // Kiểm tra xem là sản phẩm đang bán hay là yêu cầu chờ duyệt
     const productsCollection = getCollection('products');
     const updateResult = await productsCollection.updateOne(
       { "Products.id": productId, "Products.sellerid": sellerId },
@@ -333,7 +323,6 @@ app.delete('/api/seller/products/:productId', authenticate, async (req, res) => 
       return res.status(200).json({ success: true, message: 'Đã xóa sản phẩm khỏi gian hàng thành công.' });
     }
 
-    // Nếu không có trong products, kiểm tra trong productRequests
     const reqResult = await getCollection('productRequests').deleteOne({
       $or: [{ requestId: productId }, { _id: productId }],
       $or: [{ userId: sellerId }, { userID: sellerId }]
@@ -353,7 +342,6 @@ app.delete('/api/seller/products/:productId', authenticate, async (req, res) => 
 
 app.get('/api/environment/dashboard', async (req, res) => {
   try {
-    // 1. Lấy dữ liệu từ ba collection MongoDB.
     const [categories, orders, users] = await Promise.all([
       getCollection('products').find({}).toArray(),
       getCollection('sellOrders').find({}).toArray(),
@@ -362,7 +350,6 @@ app.get('/api/environment/dashboard', async (req, res) => {
         .toArray()
     ]);
 
-    // 2. Chỉ đếm những tin sản phẩm còn đang bán.
     const devicesListed = categories.reduce((total, category) => {
       const products = Array.isArray(category.Products)
         ? category.Products
@@ -376,7 +363,6 @@ app.get('/api/environment/dashboard', async (req, res) => {
       return total + activeProducts.length;
     }, 0);
 
-    // 3. Chỉ tính những đơn đã giao thành công.
     const completedStatuses = [
       'Đã giao',
       'Đã giao hàng',
@@ -387,7 +373,6 @@ app.get('/api/environment/dashboard', async (req, res) => {
       completedStatuses.includes(order.status)
     );
 
-    // 4. Hàm cộng số lượng thiết bị trong các đơn hàng.
     const countDevices = orderList => orderList.reduce((total, order) => {
       const products = Array.isArray(order.products)
         ? order.products
@@ -405,19 +390,14 @@ app.get('/api/environment/dashboard', async (req, res) => {
 
     const devicesPurchased = countDevices(completedOrders);
 
-    // 5. Đếm riêng thiết bị cũ được mua lại.
     const reusedDevicesPurchased = countDevices(
       completedOrders.filter(order => order.orderType === 'resell')
     );
-    // Hệ số phát thải vòng đời tham chiếu (kg CO₂e / thiết bị).
-    // Nguồn tham khảo: ADEME / Impact CO₂.
-    // Chỉ dùng cho danh mục tương ứng rõ ràng.
     const co2eFactors = {
       'Laptop': 193,
       'Máy tính bảng': 87.1
     };
 
-    // Liên kết mã sản phẩm với danh mục từ collection products.
     const productCategoryMap = new Map();
 
     categories.forEach(category => {
@@ -435,7 +415,6 @@ app.get('/api/environment/dashboard', async (req, res) => {
       });
     });
 
-    // Chỉ lấy đơn mua lại thiết bị cũ đã hoàn thành.
     const completedResellOrders = completedOrders.filter(
       order => order.orderType === 'resell'
     );
@@ -474,13 +453,11 @@ app.get('/api/environment/dashboard', async (req, res) => {
 
     co2eReferenceKg = Math.round(co2eReferenceKg * 100) / 100;
 
-    // 6. Tổng khối lượng rác điện tử đã được ghi nhận.
     const eWasteProcessedKg = users.reduce(
       (sum, user) => sum + (Number(user.eWasteRecycledKg) || 0),
       0
     );
 
-    // 7. Trả kết quả cho frontend Angular.
     res.status(200).json({
       devicesListed,
       devicesPurchased,
@@ -722,7 +699,6 @@ app.patch('/api/admin/users/:userID/green-coins', authenticate, requireAdmin, as
     );
     if (!result) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
     res.status(200).json({ user: result, amount, recycledKg });
-    // Gửi thông báo sau phản hồi: không làm chậm thao tác cộng GreenCoins.
     void createRepairNotification(
       req.params.userID,
       'Bạn đã nhận GreenCoins từ tái chế',
@@ -1349,7 +1325,6 @@ function registerRepairRoutes() {
         }
         listingCommitted = true;
 
-        // Tự động nâng cấp tài khoản sang vai trò SELLER khi chọn đăng bán lại thiết bị sau kiểm tra AI
         try {
           const usersCollection = await getCollection('users');
           const currentUserDoc = await usersCollection.findOne({ userID: req.auth.userID });
@@ -1614,7 +1589,6 @@ app.get('/products', async (req, res) => {
     const collection = await getCollection('products');
     const categories = await collection.find({}).toArray();
     
-    // Chỉ truy vấn những người bán thực sự có sản phẩm, dùng projection để giảm tối đa payload
     const sellerIds = new Set();
     categories.forEach(cat => {
       (cat.Products || []).forEach(p => {
@@ -1784,7 +1758,6 @@ app.post('/orders', authenticate, async (req, res) => {
     const sellOrdersCollection = await getCollection('sellOrders');
     const usersCollection = await getCollection('users');
 
-    // Chỉ tìm đúng các người bán có trong đơn hàng
     const sellerIds = new Set();
     (orderData.sellerPackages || []).forEach(pkg => {
       if (pkg.sellerId) sellerIds.add(pkg.sellerId);
@@ -2023,7 +1996,6 @@ app.put('/orders/status/:orderId', authenticate, requireAdmin, async (req, res) 
     }
 
     res.status(200).json({ success: true, message: `Đã chuyển trạng thái đơn hàng sang ${status}` });
-    // Chỉ bổ sung thông báo sau khi trả kết quả; KHÔNG sửa logic đơn hàng gốc.
     if (deliveredStatuses.includes(status) && !deliveredStatuses.includes(previousStatus) && (order.customerID || order.customerId)) {
       void createRepairNotification(
         order.customerID || order.customerId,
@@ -2098,7 +2070,6 @@ app.get('/orders/detail/:id', authenticate, async (req, res) => {
       };
     }
 
-    // Chỉ tìm sản phẩm nếu đơn hàng thiếu thông tin ảnh hoặc tên
     const missingPIds = (ord.products || ord.items || [])
       .filter(item => !item.title || !item.img)
       .map(item => item.productID || item.productId || item.id)
@@ -2148,7 +2119,6 @@ app.get('/orders', authenticate, async (req, res) => {
       $or: [{ customerID: customerID }, { customerId: customerID }]
     }).sort({ createdAt: -1, _id: -1 }).toArray();
 
-    // Chỉ bổ sung nếu có đơn cũ bị thiếu sellerInfo hoặc thiếu chi tiết sản phẩm
     const missingSellerIds = new Set();
     const missingProductIds = new Set();
 
@@ -2338,7 +2308,6 @@ app.put('/notifications/read-all', authenticate, async (req, res) => {
   }
 });
 
-// ENVIRONMENTAL DASHBOARD - PERSONAL
 app.get('/api/environment/me', authenticate, async (req, res) => {
   try {
     const userID = req.auth.userID;
